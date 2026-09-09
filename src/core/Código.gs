@@ -31,6 +31,7 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('Sinalização do Mall')
     .addItem('Diagnóstico da release S26.10', 'diagnosticoS2610F2')
     .addSeparator()
+    .addItem('Provisionar novo setor (Clonar base limpa)', 'menuProvisionarNovoSetor')
     .addItem('Abrir pasta raiz no Drive', 'abrirPastaRaizS0')
     .addToUi();
 }

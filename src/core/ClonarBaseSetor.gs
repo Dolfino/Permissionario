@@ -2,7 +2,9 @@
 // SINALIZAÇÃO DO MALL — PROVISIONAMENTO E CLONAGEM DE BASE
 // Módulo: ClonarBaseSetor.gs
 // Objetivo: Clonar a base testada e funcional para novos setores
-//           da empresa, replicando pastas e planilhas limpas.
+//           da empresa, preservando toda a cartografia (plantas,
+//           setores, torres e calibrações) e limpando apenas
+//           os registros operacionais do dia a dia.
 // ========================================================
 
 /**
@@ -13,6 +15,28 @@ var PROVISIONING_CONFIG = Object.freeze({
   TEMPLATE_FOLDER_ID: '1tbGCbyz3gxMHkNgbcSgbl1Zt2baDZ5xh',
   TIMEZONE: 'America/Fortaleza'
 });
+
+/**
+ * Lista explícita de abas que contêm DADOS OPERACIONAIS / OCORRÊNCIAS / REGISTROS.
+ * APENAS estas abas têm seus registros (linhas 2+) limpos durante a clonagem.
+ * Todas as abas de infraestrutura física do shopping (PLANTAS, MAPAS_SETORES,
+ * MAPA_TRANSFORMACOES, MAPA_AREAS_NIVEL, CARTOGRAFIA_TORRES, etc.) são PRESERVADAS.
+ */
+var ABAS_OPERACIONAIS_PARA_LIMPAR = [
+  'REGISTROS',
+  'REGISTRO_FOTOS',
+  'REGISTRO_HISTORICO',
+  'AUDITORIA',
+  'PENDENCIAS',
+  'AGENDA_INSPECOES',
+  'PLANOS_PREVENTIVOS',
+  'ALERTAS_OPERACIONAIS',
+  'REGRAS_NOTIFICACAO',
+  'NOTIFICACOES_ENVIO',
+  'SESSOES_USUARIO',
+  'BACKUPS',
+  'CARTOGRAFIA_HISTORICO'
+];
 
 /**
  * Ponto de entrada para a interface gráfica da planilha (Menu 'Sinalização do Mall').
@@ -40,8 +64,8 @@ function menuProvisionarNovoSetor() {
     'Confirmar Provisionamento',
     'Deseja criar a base completa para o setor "' + nomeSetor + '"?\n\n' +
     '• Estrutura de pastas nova e limpa no Drive\n' +
-    '• Nova planilha com todas as abas e formatos preservados\n' +
-    '• Dados operacionais zerados (pronta para uso)',
+    '• Cartografia completa do shopping preservada (Plantas, Setores, Torres e Áreas)\n' +
+    '• Registros operacionais zerados (pronta para uso)',
     ui.ButtonSet.YES_NO
   );
 
@@ -69,15 +93,16 @@ function menuProvisionarNovoSetor() {
       '</div>' +
       '<table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:12px;">' +
       '  <tr style="border-bottom: 1px solid #e5e7eb;"><td style="padding:4px 0; color:#6b7280;">Pastas estruturadas:</td><td style="text-align:right; font-weight:bold;">' + res.pastasCriadas.length + '</td></tr>' +
-      '  <tr style="border-bottom: 1px solid #e5e7eb;"><td style="padding:4px 0; color:#6b7280;">Abas sanitizadas (limpas):</td><td style="text-align:right; font-weight:bold;">' + res.abasLimpas.length + '</td></tr>' +
+      '  <tr style="border-bottom: 1px solid #e5e7eb;"><td style="padding:4px 0; color:#6b7280;">Abas de cartografia preservadas:</td><td style="text-align:right; font-weight:bold; color:#065f46;">' + (res.abasPreservadas ? res.abasPreservadas.length : 0) + '</td></tr>' +
+      '  <tr style="border-bottom: 1px solid #e5e7eb;"><td style="padding:4px 0; color:#6b7280;">Abas operacionais limpas:</td><td style="text-align:right; font-weight:bold;">' + res.abasLimpas.length + '</td></tr>' +
       '  <tr><td style="padding:4px 0; color:#6b7280;">Administrador inicial:</td><td style="text-align:right; font-weight:bold;">' + (res.adminAdicionado || 'Sim') + '</td></tr>' +
       '</table>' +
       '<div style="font-size:11px; color:#6b7280; border-top: 1px solid #e5e7eb; padding-top:8px;">' +
-      '  <b>Próximo passo:</b> Abra a nova planilha e, caso queira publicar como Web App independente, acesse <i>Extensões &gt; Apps Script &gt; Implantar &gt; Nova implantação</i>.' +
+      '  <b>Próximo passo:</b> Abra a nova planilha e acesse <i>Extensões &gt; Apps Script &gt; Implantar &gt; Nova implantação</i> para publicar o Web App deste setor.' +
       '</div>' +
       '</div>';
 
-    var dialog = HtmlService.createHtmlOutput(htmlMensagem).setWidth(520).setHeight(360);
+    var dialog = HtmlService.createHtmlOutput(htmlMensagem).setWidth(520).setHeight(390);
     ui.showModalDialog(dialog, 'Provisionamento Concluído');
 
   } catch (erro) {
@@ -91,13 +116,7 @@ function menuProvisionarNovoSetor() {
  *
  * @param {string} nomeSetor - Nome do setor (ex: "Almoxarifado", "Estacionamento", "Segurança").
  * @param {string} [pastaDestinoPaiId] - ID da pasta no Drive onde a nova pasta do setor será criada.
- *                                      Se omitido, cria no mesmo diretório pai da pasta template.
  * @param {Object} [opcoes] - Opções avançadas de customização.
- * @param {string} [opcoes.templateSpreadsheetId] - ID alternativo de planilha template.
- * @param {string} [opcoes.templateFolderId] - ID alternativo de pasta template.
- * @param {boolean} [opcoes.preservarCatalogos=true] - Se true, preserva as opções padrão de domínio.
- * @param {boolean} [opcoes.adicionarUsuarioAdmin=true] - Se true, adiciona o executor como ADMIN em USUARIOS.
- * @param {string} [opcoes.emailAdmin] - E-mail do administrador inicial (padrão: usuário ativo).
  * @return {Object} Relatório estruturado com IDs, URLs e resumo das operações.
  */
 function clonarBaseParaNovoSetor(nomeSetor, pastaDestinoPaiId, opcoes) {
@@ -109,7 +128,6 @@ function clonarBaseParaNovoSetor(nomeSetor, pastaDestinoPaiId, opcoes) {
   opcoes = opcoes || {};
   var templateSsId = opcoes.templateSpreadsheetId || PROVISIONING_CONFIG.TEMPLATE_SPREADSHEET_ID;
   var templateFolderId = opcoes.templateFolderId || PROVISIONING_CONFIG.TEMPLATE_FOLDER_ID;
-  var preservarCatalogos = opcoes.preservarCatalogos !== false;
   var adicionarAdmin = opcoes.adicionarUsuarioAdmin !== false;
   var emailAdmin = opcoes.emailAdmin || (Session.getActiveUser() ? Session.getActiveUser().getEmail() : '') || 'admin@empresa.com';
 
@@ -120,6 +138,7 @@ function clonarBaseParaNovoSetor(nomeSetor, pastaDestinoPaiId, opcoes) {
     mapaPastasPorNome: {},
     mapaPastasPorId: {},
     abasProcessadas: [],
+    abasPreservadas: [],
     abasLimpas: [],
     configuracoesAtualizadas: {},
     adminAdicionado: emailAdmin
@@ -148,7 +167,7 @@ function clonarBaseParaNovoSetor(nomeSetor, pastaDestinoPaiId, opcoes) {
   var pastaTemplateOrigem = DriveApp.getFolderById(templateFolderId);
   clonarEstruturaPastasRecursiva_(pastaTemplateOrigem, novaPastaRaiz, relatorio);
 
-  // Garantir existência das pastas funcionais essenciais caso não existissem no template
+  // Garantir existência das pastas funcionais essenciais
   garantirSubpastaSeNaoExistir_(novaPastaRaiz, 'Fotos', relatorio);
   garantirSubpastaSeNaoExistir_(novaPastaRaiz, 'Backups', relatorio);
   garantirSubpastaSeNaoExistir_(novaPastaRaiz, 'Relatórios', relatorio);
@@ -164,7 +183,7 @@ function clonarBaseParaNovoSetor(nomeSetor, pastaDestinoPaiId, opcoes) {
     url: copiaPlanilhaArquivo.getUrl()
   };
 
-  // 5. Abrir a planilha clonada e sanitizar todas as abas
+  // 5. Abrir a planilha clonada e sanitizar APENAS as abas operacionais
   var novaSs = SpreadsheetApp.open(copiaPlanilhaArquivo);
   var abas = novaSs.getSheets();
 
@@ -224,20 +243,21 @@ function clonarBaseParaNovoSetor(nomeSetor, pastaDestinoPaiId, opcoes) {
       }
       relatorio.abasLimpas.push({ aba: nomeAba, linhasRemovidas: Math.max(0, lastRow - 1), reinicializada: true });
 
-    } else if (nomeAba === 'PERFIS_PERMISSOES' || nomeAba === 'README') {
-      // Preservar tabelas mestras estáticas e documentação
-      continue;
-
-    } else if ((nomeAba === 'CATALOGOS_DOMINIO' || nomeAba === 'CATALOGOS_DOMINIO_OPCOES') && preservarCatalogos) {
-      // Preservar opções padrão de catálogo se solicitado
-      continue;
-
-    } else {
-      // Limpar todos os registros operacionais (linhas 2 em diante), preservando cabeçalhos e formatações
+    } else if (ABAS_OPERACIONAIS_PARA_LIMPAR.indexOf(nomeAba) !== -1) {
+      // Limpar APENAS as abas operacionais (linhas 2 em diante)
       if (lastRow > 1 && lastCol > 0) {
         sh.getRange(2, 1, lastRow - 1, lastCol).clearContent();
         relatorio.abasLimpas.push({ aba: nomeAba, linhasRemovidas: lastRow - 1 });
       }
+
+    } else {
+      // TODAS AS DEMAIS ABAS:
+      // (PLANTAS, MAPAS_SETORES, MAPA_TRANSFORMACOES, MAPA_AREAS_NIVEL, CARTOGRAFIA_TORRES,
+      // CARTOGRAFIA_TORRE_REPRESENTACOES, CARTOGRAFIA_TORRE_COMPONENTES, CARTOGRAFIA_PUBLICACOES,
+      // PONTOS_REFERENCIA, REFERENCIAS_CATALOGO, CAMADAS_PRESETS_CORPORATIVOS, CATALOGOS_DOMINIO,
+      // CATALOGOS_DOMINIO_OPCOES, PERFIS_PERMISSOES, README)
+      // SÃO PRESERVADAS COM TODOS OS DADOS DA INFRAESTRUTURA DO SHOPPING!
+      relatorio.abasPreservadas.push(nomeAba);
     }
   }
 
@@ -247,6 +267,109 @@ function clonarBaseParaNovoSetor(nomeSetor, pastaDestinoPaiId, opcoes) {
   relatorio.ok = true;
 
   return relatorio;
+}
+
+/**
+ * Repara ou sincroniza as abas de cartografia da planilha template para uma planilha de setor
+ * que tenha ficado sem as informações de mapas, setores ou torres.
+ *
+ * @param {string} [idPlanilhaDestino] - ID da planilha a ser reparada (se omitido, usa a planilha ativa).
+ * @param {string} [idPlanilhaOrigem] - ID da planilha template (padrão: template oficial).
+ */
+function sincronizarCartografiaDoModelo(idPlanilhaDestino, idPlanilhaOrigem) {
+  var ssDestino = idPlanilhaDestino ? SpreadsheetApp.openById(idPlanilhaDestino) : SpreadsheetApp.getActiveSpreadsheet();
+  var idOrigem = idPlanilhaOrigem || PROVISIONING_CONFIG.TEMPLATE_SPREADSHEET_ID;
+  var ssOrigem = SpreadsheetApp.openById(idOrigem);
+
+  var abasCartografia = [
+    'PLANTAS',
+    'MAPAS_SETORES',
+    'MAPA_TRANSFORMACOES',
+    'MAPA_AREAS_NIVEL',
+    'SETORES',
+    'CARTOGRAFIA_COLECOES',
+    'CARTOGRAFIA_ARQUIVOS',
+    'CORREDORES',
+    'CORREDOR_PONTOS',
+    'SEGMENTOS_CORREDORES',
+    'CRUZAMENTOS',
+    'PONTOS_REFERENCIA',
+    'REFERENCIAS_CATALOGO',
+    'LOJAS_MAPA',
+    'LOJAS',
+    'CARTOGRAFIA_TORRES',
+    'CARTOGRAFIA_TORRE_REPRESENTACOES',
+    'CARTOGRAFIA_TORRE_COMPONENTES',
+    'CARTOGRAFIA_PUBLICACOES',
+    'CAMADAS_PRESETS_CORPORATIVOS'
+  ];
+
+  var copiadas = [];
+
+  for (var i = 0; i < abasCartografia.length; i++) {
+    var nomeAba = abasCartografia[i];
+    var shSrc = ssOrigem.getSheetByName(nomeAba);
+    if (!shSrc || shSrc.getLastRow() < 2) continue;
+
+    var shDst = ssDestino.getSheetByName(nomeAba);
+    if (!shDst) {
+      shDst = ssDestino.insertSheet(nomeAba);
+    }
+
+    var lr = shSrc.getLastRow();
+    var lc = shSrc.getLastColumn();
+    if (lr > 0 && lc > 0) {
+      var vals = shSrc.getRange(1, 1, lr, lc).getValues();
+      shDst.clear();
+      shDst.getRange(1, 1, lr, lc).setValues(vals);
+      copiadas.push(nomeAba + ' (' + (lr - 1) + ' registros)');
+    }
+  }
+
+  SpreadsheetApp.flush();
+
+  return {
+    ok: true,
+    planilha: ssDestino.getName(),
+    totalAbas: copiadas.length,
+    abas: copiadas
+  };
+}
+
+/**
+ * Função direta para restaurar a cartografia da planilha recém-criada de Manutenção.
+ */
+function repararPlanilhaManutencao() {
+  var idManutencao = '1R-w0TH5gtu5oBVL-NPtdG5Hpsrv_v32hMhyAYyZfxz0';
+  var res = sincronizarCartografiaDoModelo(idManutencao);
+  Logger.log('Resultado do reparo da Manutenção: ' + JSON.stringify(res, null, 2));
+  return res;
+}
+
+/**
+ * Item de menu para sincronizar ou reparar a cartografia da planilha ativa com o modelo mestre.
+ */
+function menuSincronizarCartografia() {
+  var ui = SpreadsheetApp.getUi();
+  var confirmacao = ui.alert(
+    'Sincronizar Cartografia do Mall',
+    'Deseja atualizar todas as plantas, setores, transformações e torres a partir do modelo mestre?\n\n' +
+    'Seus registros operacionais NÃO serão apagados.',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirmacao !== ui.Button.YES) return;
+
+  try {
+    var res = sincronizarCartografiaDoModelo();
+    ui.alert(
+      'Cartografia Atualizada',
+      'Sucesso! Foram sincronizadas ' + res.totalAbas + ' abas de cartografia:\n\n' + res.abas.join('\n'),
+      ui.ButtonSet.OK
+    );
+  } catch (e) {
+    ui.alert('Erro ao Sincronizar', 'Falha: ' + e.message, ui.ButtonSet.OK);
+  }
 }
 
 /**
@@ -272,7 +395,6 @@ function clonarEstruturaPastasRecursiva_(pastaOrigem, pastaDestino, relatorio) {
     relatorio.mapaPastasPorNome[chaveNome] = novaSub.getId();
     relatorio.mapaPastasPorId[sub.getId()] = novaSub.getId();
 
-    // Recursão para subdiretórios
     clonarEstruturaPastasRecursiva_(sub, novaSub, relatorio);
   }
 }
@@ -319,7 +441,6 @@ function atualizarOuInserirConfig_(shConfig, chave, valor, descricao) {
     }
   }
 
-  // Se não existia, anexa nova linha
   shConfig.appendRow([chaveBuscada, valor, descricao || '']);
 }
 
@@ -356,13 +477,4 @@ function configurarUsuarioAdminInicial_(shUsuarios, emailAdmin, nomeSetor) {
   }
 
   shUsuarios.appendRow(linha);
-}
-
-/**
- * Função utilitária para teste rápido de provisionamento via editor de script.
- */
-function testarProvisionamentoManual() {
-  var resultado = clonarBaseParaNovoSetor('Setor Teste ' + Utilities.formatDate(new Date(), 'America/Fortaleza', 'yyyyMMdd_HHmm'));
-  Logger.log(JSON.stringify(resultado, null, 2));
-  return resultado;
 }

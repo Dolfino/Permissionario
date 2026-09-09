@@ -32,6 +32,7 @@ function onOpen() {
     .addItem('Diagnóstico da release S26.10', 'diagnosticoS2610F2')
     .addSeparator()
     .addItem('Provisionar novo setor (Clonar base limpa)', 'menuProvisionarNovoSetor')
+    .addItem('Sincronizar Cartografia do Mall', 'menuSincronizarCartografia')
     .addItem('Abrir pasta raiz no Drive', 'abrirPastaRaizS0')
     .addToUi();
 }

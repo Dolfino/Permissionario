@@ -1,0 +1,19 @@
+# Backups e arquivos compactados
+backups/
+*.zip
+
+# Dependências e caches
+node_modules/
+.npm/
+npm-debug.log*
+
+# Sistema Operacional / IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Credenciais e tokens (NUNCA versionar)
+.clasprc.json
+*.pem
+*.key

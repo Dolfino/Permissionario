@@ -1,0 +1,2775 @@
+<!-- S26.10 — arquivo atualizado; release MVP-3.32.0-SINALIZACAO-S26.10 em produção -->
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('styles'); ?>
+</head>
+
+<body>
+  <header>
+    <div><strong>Sinalização do Mall</strong><small id="versao">MVP-3.32.0-SINALIZACAO-S26.10</small></div><span
+      id="status" class="pill">Carregando…</span><button id="userBadgeS14" class="user-badge" type="button"
+      title="Sessão atual">Carregando usuário…</button>
+  </header>
+  <main>
+    <section class="toolbar toolbar-s22513">
+      <div class="map-selector-row-s22513">
+        <label class="map-selector-s22513">Mapa / visualização
+          <select id="mapaSelect"></select>
+        </label>
+        <button id="centralizar" class="centralizar-topo-s22514" type="button" aria-label="Centralizar mapa"
+          title="Centralizar mapa">
+          <span aria-hidden="true">⌖</span>
+        </button>
+        <button id="appMenuBtnS22513" class="app-menu-trigger-s22513" type="button" aria-expanded="false"
+          aria-controls="appMenuS22513" aria-label="Abrir menu">
+          <span class="menu-icon-s22513" aria-hidden="true">☰</span>
+          <span>Menu</span>
+          <span id="menuBadgeS22513" class="menu-badge-s22513" hidden>0</span>
+        </button>
+      </div>
+
+      <div id="appMenuS22513" class="app-menu-s22513" hidden>
+        <div class="app-menu-head-s22513">
+          <strong>Menu</strong>
+          <button id="appMenuCloseS22513" class="app-menu-close-s22513" type="button"
+            aria-label="Fechar menu">×</button>
+        </div>
+
+        <div id="appMenuPrincipalS268D" class="app-menu-view-s268d">
+          <section class="app-menu-section-s268d" aria-labelledby="menuAcoesTituloS268D">
+            <div id="menuAcoesTituloS268D" class="app-menu-section-title-s268d">Ações rápidas</div>
+            <div class="app-menu-grid-s22513">
+              <button id="novo" class="primary app-menu-item-s22513" type="button">
+                <span class="app-menu-icon-s22513">＋</span><span>Novo registro</span>
+              </button>
+              <button id="camadasBtn" class="app-menu-item-s22513" type="button">
+                <span class="app-menu-icon-s22513">▱</span><span>Camadas</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="app-menu-section-s268d" aria-labelledby="menuOperacaoTituloS268D">
+            <div id="menuOperacaoTituloS268D" class="app-menu-section-title-s268d">Operação</div>
+            <div class="app-menu-grid-s22513">
+              <button id="prepararOffline" class="app-menu-item-s22513" type="button">
+                <span class="app-menu-icon-s22513">↓</span><span>Atualizar offline</span>
+              </button>
+              <button id="filaBtn" class="app-menu-item-s22513" type="button">
+                <span class="app-menu-icon-s22513">⇅</span><span>Fila</span>
+                <span id="filaCount" class="queue-count">0</span>
+              </button>
+              <button id="centralGestaoBtn" class="app-menu-item-s22513" type="button">
+                <span class="app-menu-icon-s22513">◎</span><span>Central</span>
+              </button>
+              <button id="agendaBtnS19" class="app-menu-item-s22513" type="button">
+                <span class="app-menu-icon-s22513">□</span><span>Agenda</span>
+              </button>
+              <button id="alertasBtnS21" class="app-menu-item-s22513 app-menu-item-wide-s268d" type="button">
+                <span class="app-menu-icon-s22513">!</span><span>Alertas</span>
+                <span id="alertasBadgeS21" class="toolbar-badge-s21" hidden>0</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="app-menu-section-s268d" aria-labelledby="menuAnaliseTituloS268D">
+            <div id="menuAnaliseTituloS268D" class="app-menu-section-title-s268d">Análise</div>
+            <div class="app-menu-grid-s22513">
+              <button id="dashboardBtn" class="app-menu-item-s22513" type="button">
+                <span class="app-menu-icon-s22513">▦</span><span>Dashboard</span>
+              </button>
+              <button id="relatoriosBtn" class="app-menu-item-s22513" type="button">
+                <span class="app-menu-icon-s22513">≡</span><span>Relatórios</span>
+              </button>
+            </div>
+          </section>
+
+          <section id="menuGestaoSectionS268D" class="app-menu-section-s268d" aria-labelledby="menuGestaoTituloS268D" hidden>
+            <div id="menuGestaoTituloS268D" class="app-menu-section-title-s268d">Gestão</div>
+            <div class="app-menu-grid-s22513">
+              <button id="cartografiaMenuBtnS268D" class="app-menu-item-s22513 app-menu-item-feature-s268d" type="button" hidden>
+                <span class="app-menu-icon-s22513">⌖</span>
+                <span class="app-menu-item-copy-s268d"><strong>Cartografia</strong><small>Calibração e delimitações</small></span>
+                <span class="app-menu-chevron-s268d">›</span>
+              </button>
+              <!-- S26.9-C2 — Central de Configurações de cadastro -->
+              <button id="catalogosBtnS269C1" class="app-menu-item-s22513 app-menu-item-feature-s268d" type="button" hidden>
+                <span class="app-menu-icon-s22513">≡</span>
+                <span class="app-menu-item-copy-s268d"><strong>Configurações de cadastro</strong><small>Tipos, materiais e demais listas</small></span>
+                <span class="app-menu-chevron-s268d">›</span>
+              </button>
+              <!-- S26.10-R3 — Central de Referências -->
+              <button id="referenciasBtnS2610R3" class="app-menu-item-s22513 app-menu-item-feature-s268d" type="button" hidden>
+                <span class="app-menu-icon-s22513">⌖</span>
+                <span class="app-menu-item-copy-s268d"><strong>Referências</strong><small>Pontos, serviços e locais de apoio</small></span>
+                <span class="app-menu-chevron-s268d">›</span>
+              </button>
+              <button id="adminBtnS14" class="app-menu-item-s22513" type="button" hidden>
+                <span class="app-menu-icon-s22513">⚙</span><span>Administração</span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <div id="appMenuCartografiaS268D" class="app-menu-view-s268d app-menu-cartografia-s268d" hidden>
+          <div class="app-menu-subhead-s268d">
+            <button id="voltarMenuPrincipalS268D" class="app-menu-back-s268d" type="button" aria-label="Voltar ao menu principal">←</button>
+            <div>
+              <strong>Cartografia</strong>
+              <small id="cartografiaContextoS268D">Ferramentas administrativas</small>
+            </div>
+          </div>
+
+          <div class="app-menu-tools-s268d">
+            <button id="calibracaoBtnS242" class="app-menu-tool-s268d" type="button" hidden>
+              <span class="app-menu-tool-icon-s268d">⌖</span>
+              <span><strong>Calibração dos níveis</strong><small>Alinhar os Setores às plantas operacionais 2025.</small></span>
+              <span class="app-menu-chevron-s268d">›</span>
+            </button>
+            <button id="areasNivel0BtnS268D" class="app-menu-tool-s268d" type="button" hidden>
+              <span class="app-menu-tool-icon-s268d">⌗</span>
+              <span><strong>Áreas do Subsolo</strong><small>Estacionamento, circulação, acessos e área externa do Nível 0.</small></span>
+              <span class="app-menu-chevron-s268d">›</span>
+            </button>
+            <button id="areasNivel1BtnS246" class="app-menu-tool-s268d" type="button" hidden>
+              <span class="app-menu-tool-icon-s268d">⌗</span>
+              <span><strong>Áreas especiais do Nível 1</strong><small>Hotel, CDM, frente e áreas externas.</small></span>
+              <span class="app-menu-chevron-s268d">›</span>
+            </button>
+            <button id="areaVermelhaBtnS244" class="app-menu-tool-s268d" type="button" hidden>
+              <span class="app-menu-tool-icon-s268d">▱</span>
+              <span><strong>Estacionamento / Nível 3</strong><small>Delimitar a Área Vermelha e o estacionamento.</small></span>
+              <span class="app-menu-chevron-s268d">›</span>
+            </button>
+            <button id="torresBtnS2610C" class="app-menu-tool-s268d" type="button" hidden>
+              <span class="app-menu-tool-icon-s268d">↕</span>
+              <span><strong>Torres / Núcleos verticais</strong><small>Identidades físicas e polígonos independentes em N0, N1, N2 e N3.</small></span>
+              <span class="app-menu-chevron-s268d">›</span>
+            </button>
+          </div>
+
+          <div class="app-menu-note-s268d">
+            As ferramentas alteram a cartografia administrativa, não os registros operacionais.
+          </div>
+        </div>
+      </div>
+
+      <div id="appMenuBackdropS22513" class="app-menu-backdrop-s22513" hidden></div>
+
+      <div id="camadas" class="layers layers-s22513" hidden>
+        <div class="layers-head-s22516">
+          <strong>Camadas</strong>
+          <button id="fecharCamadasS22516" class="layers-close-s22516" type="button" aria-label="Fechar camadas"
+            title="Fechar">×</button>
+        </div>
+        <div class="layers-list-s22516">
+          <label><input id="toggleSinalizacoes" type="checkbox" checked> Sinalizações <span
+              id="quickCountSinalizacoesS261" class="layer-count-s261">0</span></label>
+          <label><input type="checkbox" data-layer="referencias" checked> Referências <span
+              id="quickCountReferenciasS261" class="layer-count-s261">0</span></label>
+          <label><input type="checkbox" data-layer="cruzamentos" checked> Cruzamentos <span
+              id="quickCountCruzamentosS261" class="layer-count-s261">0</span></label>
+          <label><input type="checkbox" data-layer="lojas" checked> Lojas <span id="quickCountLojasS261"
+              class="layer-count-s261">0</span></label>
+        </div>
+        <div class="layers-footer-s261">
+          <button id="gerenciarCamadasS261" class="layers-manage-s261" type="button">Gerenciar camadas <span
+              id="filtrosAtivosBadgeS262" class="layers-filter-badge-s262" hidden>0</span></button>
+        </div>
+      </div>
+
+      <div id="centralCamadasBackdropS261" class="layers-center-backdrop-s261" hidden></div>
+      <aside id="centralCamadasS261" class="layers-center-s261" hidden aria-hidden="true"
+        aria-labelledby="centralCamadasTituloS261">
+        <div class="layers-center-head-s261">
+          <div>
+            <small>S26.6</small>
+            <strong id="centralCamadasTituloS261">Central de Camadas</strong>
+            <span>Visibilidade, pesquisa, filtros, simbologia e presets</span>
+          </div>
+          <button id="fecharCentralCamadasS261" class="layers-center-close-s261" type="button"
+            aria-label="Fechar Central de Camadas">×</button>
+        </div>
+
+        <div class="layers-center-body-s261">
+          <section class="layers-center-section-s261">
+            <div class="layers-center-section-title-s261">
+              <div><strong>Visibilidade</strong><span>Escolha o que deve aparecer no mapa.</span></div>
+              <span id="totalCamadasAtivasS261" class="layers-active-pill-s261">4 ativas</span>
+            </div>
+
+            <div class="layers-center-list-s261">
+              <label class="layers-center-row-s261">
+                <input id="centralToggleSinalizacoesS261" type="checkbox" checked>
+                <span class="layers-center-icon-s261 sig">●</span>
+                <span class="layers-center-label-s261"><strong>Sinalizações</strong><small>Ativos SIG posicionados no
+                    mapa</small></span>
+                <span id="centralCountSinalizacoesS261" class="layers-center-count-s261">0</span>
+              </label>
+              <label class="layers-center-row-s261">
+                <input id="centralToggleReferenciasS261" type="checkbox" checked>
+                <span class="layers-center-icon-s261 ref">●</span>
+                <span class="layers-center-label-s261"><strong>Referências</strong><small>Pontos de referência
+                    cartográfica</small></span>
+                <span id="centralCountReferenciasS261" class="layers-center-count-s261">0</span>
+              </label>
+              <label class="layers-center-row-s261">
+                <input id="centralToggleCruzamentosS261" type="checkbox" checked>
+                <span class="layers-center-icon-s261 cross">●</span>
+                <span class="layers-center-label-s261"><strong>Cruzamentos</strong><small>Interseções e pontos de
+                    circulação</small></span>
+                <span id="centralCountCruzamentosS261" class="layers-center-count-s261">0</span>
+              </label>
+              <label class="layers-center-row-s261">
+                <input id="centralToggleLojasS261" type="checkbox" checked>
+                <span class="layers-center-icon-s261 shop">●</span>
+                <span class="layers-center-label-s261"><strong>Lojas</strong><small>Lojas/LUCs disponíveis na
+                    planta</small></span>
+                <span id="centralCountLojasS261" class="layers-center-count-s261">0</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="layers-center-section-s261 layers-filter-section-s262">
+            <div class="layers-center-section-title-s261">
+              <div><strong>Pesquisar sinalizações</strong><span>Busca local nos dados já carregados, inclusive
+                  offline.</span></div>
+              <span id="filtrosAtivosPillS262" class="layers-active-pill-s261" hidden>0 filtros</span>
+            </div>
+            <div class="layers-search-wrap-s262">
+              <span aria-hidden="true">⌕</span>
+              <input id="buscaCamadasS262" type="search" autocomplete="off"
+                placeholder="Protocolo, título, rua, loja, responsável…" aria-label="Pesquisar sinalizações no mapa">
+              <button id="limparBuscaCamadasS262" type="button" aria-label="Limpar pesquisa" title="Limpar pesquisa"
+                hidden>×</button>
+            </div>
+          </section>
+
+          <section class="layers-center-section-s261 layers-filter-section-s262">
+            <div class="layers-center-section-title-s261">
+              <div><strong>Filtros de sinalizações</strong><span>Combine critérios para reduzir os pins exibidos no
+                  mapa.</span></div>
+            </div>
+            <div class="layers-filter-grid-s262">
+              <label><span>Tipo</span><select id="filtroTipoS262">
+                  <option value="">Todos</option>
+                </select></label>
+              <label><span>Finalidade</span><select id="filtroFinalidadeS262">
+                  <option value="">Todas</option>
+                </select></label>
+              <label><span>Responsável</span><select id="filtroResponsavelS262">
+                  <option value="">Todos</option>
+                </select></label>
+              <label><span>Status</span><select id="filtroStatusS262">
+                  <option value="">Todos</option>
+                </select></label>
+              <label><span>Estado de conservação</span><select id="filtroEstadoS262">
+                  <option value="">Todos</option>
+                </select></label>
+              <label><span>Condição</span><select id="filtroCondicaoS262">
+                  <option value="">Todas</option>
+                </select></label>
+            </div>
+            <div class="layers-filter-summary-s262">
+              <div><strong id="resultadoFiltrosS262">0 de 0</strong><span>sinalizações visíveis</span></div>
+              <button id="limparFiltrosS262" type="button" disabled>Limpar filtros</button>
+            </div>
+            <p id="avisoCamadaOcultaS262" class="layers-filter-note-s262" hidden>A camada Sinalizações está oculta. Os
+              filtros continuam preparados e serão aplicados ao reativá-la.</p>
+          </section>
+
+          <section class="layers-center-section-s261 layers-symbol-section-s263">
+            <div class="layers-center-section-title-s261">
+              <div><strong>Aparência das sinalizações</strong><span>Escolha como os pins devem ser coloridos. A
+                  configuração é somente visual.</span></div>
+              <span id="simbologiaModoPillS263" class="layers-active-pill-s261">Status</span>
+            </div>
+            <div class="layers-symbol-controls-s263">
+              <label>
+                <span>Colorir por</span>
+                <select id="simbologiaModoS263">
+                  <option value="status">Status</option>
+                  <option value="tipo">Tipo</option>
+                  <option value="finalidade">Finalidade</option>
+                  <option value="responsavel">Responsável</option>
+                  <option value="estadoConservacao">Estado de conservação</option>
+                  <option value="condicao">Condição</option>
+                  <option value="unica">Cor única</option>
+                </select>
+              </label>
+              <label id="corUnicaWrapS263" hidden>
+                <span>Cor única</span>
+                <span class="layers-color-single-s263"><input id="corUnicaS263" type="color" value="#f50087"><code
+                    id="corUnicaHexS263">#F50087</code></span>
+              </label>
+            </div>
+            <div class="layers-symbol-summary-s263">
+              <div><strong>Legenda</strong><span>Somente categorias presentes na visão corrente.</span></div>
+              <button id="restaurarCoresS263" type="button">Restaurar cores</button>
+            </div>
+            <div id="legendaS263" class="layers-legend-s263" aria-live="polite"></div>
+            <p class="layers-symbol-note-s263">As cores desta seção não alteram a cor física cadastrada no SIG e
+              continuam disponíveis offline neste navegador.</p>
+          </section>
+
+          <section class="layers-center-section-s261 layers-corp-section-s266">
+            <div class="layers-center-section-title-s261">
+              <div><strong>Visualizações corporativas</strong><span>Presets publicados pela Administração para todos ou
+                  para um perfil específico.</span></div>
+              <span id="corpPresetPillS266" class="layers-active-pill-s261" hidden>Corporativo</span>
+            </div>
+            <div id="corpAdminCreateS266" class="layers-corp-admin-s266" hidden>
+              <label><span>Nome</span><input id="corpNomeS266" type="text" maxlength="80"
+                  placeholder="Ex.: Visão Operacional"></label>
+              <label><span>Escopo</span><select id="corpEscopoS266">
+                  <option value="GLOBAL">Todos os usuários</option>
+                  <option value="PERFIL">Perfil específico</option>
+                </select></label>
+              <label id="corpPerfilWrapS266" hidden><span>Perfil</span><select id="corpPerfilS266"></select></label>
+              <button id="corpPublicarS266" type="button">Publicar visão atual</button>
+            </div>
+            <div class="layers-corp-tools-s266">
+              <span id="corpResumoS266">Carregando visualizações corporativas…</span>
+              <button id="corpAtualizarListaS266" type="button">Atualizar</button>
+            </div>
+            <div id="corpListaS266" class="layers-preset-list-s264 layers-corp-list-s266" aria-live="polite"></div>
+            <p class="layers-preset-note-s264">Padrão por perfil tem precedência sobre padrão global. O padrão
+              corporativo é aplicado automaticamente e prevalece sobre o padrão pessoal local na abertura.</p>
+          </section>
+
+          <section class="layers-center-section-s261 layers-presets-section-s264">
+            <div class="layers-center-section-title-s261">
+              <div><strong>Minhas visualizações</strong><span>Presets pessoais salvos somente neste navegador e
+                  disponíveis offline.</span></div>
+              <span id="presetAtivoPillS264" class="layers-active-pill-s261" hidden>Preset</span>
+            </div>
+            <div class="layers-preset-create-s264">
+              <label><span>Nome da visualização</span><input id="nomePresetS264" type="text" maxlength="60"
+                  autocomplete="off" placeholder="Ex.: Visão Manutenção"></label>
+              <button id="salvarPresetS264" type="button">Salvar visualização</button>
+            </div>
+            <div class="layers-preset-tools-s264">
+              <span id="presetResumoS264">Nenhuma visualização salva.</span>
+              <button id="limparPresetAtivoS264" type="button" hidden>Desvincular visão atual</button>
+            </div>
+            <div id="listaPresetsS264" class="layers-preset-list-s264" aria-live="polite"></div>
+            <p class="layers-preset-note-s264">Presets pessoais continuam privados deste navegador. Quando existir um
+              padrão corporativo publicado, ele terá precedência na abertura da aplicação.</p>
+          </section>
+        </div>
+
+        <div class="layers-center-footer-s261">
+          <button id="restaurarCamadasPadraoS261" type="button">Restaurar padrão</button>
+          <button id="verMapaS261" class="primary" type="button">Ver mapa</button>
+        </div>
+      </aside>
+    </section>
+    <section class="map-card">
+      <div id="viewport" class="viewport">
+        <div id="stage" class="stage"><img id="mapaImg" alt="Planta do Mall">
+          <div id="referencias" class="marker-layer"></div>
+          <div id="cruzamentos" class="marker-layer"></div>
+          <div id="lojas" class="marker-layer"></div>
+          <div id="marcadoresSinalizacao" class="sinalizacao-layer"></div>
+          <div id="draftLayer" class="marker-layer interactive"></div>
+        </div>
+        <div class="zoom-info" id="zoomInfo">100%</div>
+        <aside id="sinalizacaoMapaCard" class="sinalizacao-map-card" hidden aria-live="polite">
+          <div class="sinalizacao-map-card__head">
+            <div><small id="sigCardProtocolo">Sinalização</small><strong id="sigCardTitulo">Registro</strong></div>
+            <div class="sig-card-head-actions">
+              <button id="cardEditarBtnS237" type="button" class="card-edit-btn-s237" title="Editar cadastro"
+                aria-label="Editar cadastro">✎</button>
+              <button id="btnFotosSigCardS225" class="sig-card-photo-btn" type="button" aria-label="Ver fotos"
+                title="Ver fotos" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                  <circle cx="9" cy="10" r="2"></circle>
+                  <path d="M4 17l4.5-4.5 3 3 2-2 6.5 5"></path>
+                </svg>
+                <span id="sigCardFotoCountS225" class="sig-card-photo-count">0</span>
+              </button>
+              <button id="btnFecharSigCard" class="sig-card-close" type="button" aria-label="Fechar">×</button>
+            </div>
+          </div>
+          <div class="sig-card-badges"><span id="sigCardStatus" class="sig-badge">ATIVA</span><span id="sigCardEstado"
+              class="sig-badge sig-badge-light">Boa</span></div>
+          <p id="sigCardTipo" class="sig-card-line"></p>
+          <p id="sigCardLocal" class="sig-card-line"></p>
+          <p id="sigCardResponsavel" class="sig-card-line"></p>
+          <div class="sig-card-actions">
+            <button id="btnHistoricoS8" type="button">Histórico</button><button id="btnPendenciasS10"
+              type="button">Pendências</button>
+            <button id="btnCicloVidaS18" type="button">Ciclo de vida</button><button id="btnNovaInspecao" type="button"
+              class="primary">Nova inspeção</button>
+          </div>
+        </aside>
+        <aside id="localCard" class="local-card" hidden><strong id="localTitulo">Ponto selecionado</strong><small
+            id="localStatus">Identificando localização…</small>
+          <div id="localResumo"></div>
+          <div class="local-actions"><button id="cancelarPonto" type="button">Cancelar</button><button
+              id="confirmarPonto" type="button" class="primary" disabled>Confirmar local</button></div>
+        </aside>
+      </div>
+    </section>
+    <section id="formPanel" class="form-panel" hidden aria-hidden="true">
+      <div class="form-head">
+        <div><small id="formEyebrowS237">Novo registro</small>
+          <h2 id="formTituloS237">Cadastro de sinalização</h2>
+        </div><button id="fecharForm" type="button" class="icon-btn">×</button>
+      </div>
+      <div class="location-box"><strong>Localização confirmada</strong>
+        <div id="formLocalResumo">—</div><small id="formCoords"></small>
+      </div>
+      <form id="formRegistro">
+        <input id="editModeS237" type="hidden" value="NOVO">
+        <input id="editIdRegistroS237" type="hidden" value="">
+        <input id="editProtocoloS237" type="hidden" value="">
+        <div class="grid"><label>Tipo *<select id="tipo" required></select></label><label>Finalidade *<select
+              id="finalidade" required></select></label><label class="span2">Título *<input id="titulo" maxlength="180"
+              required placeholder="Ex.: Placa Direcional — Rua José Avelino"></label><label class="span2">Texto da
+            sinalização<textarea id="textoSinalizacao" rows="3"
+              placeholder="Ex.: Praça de Alimentação →"></textarea></label><label class="span2">Descrição *<textarea
+              id="descricao" rows="4" required
+              placeholder="Descreva a peça, posição e características observadas"></textarea></label><label>Material<select
+              id="material"></select></label><label>Dimensões<input id="dimensoes"
+              placeholder="Ex.: 80 x 30 cm"></label><label>Cor predominante<input id="cor"
+              placeholder="Ex.: Azul"></label><label>Fixação<input id="fixacao"
+              list="fixacaoListaS269D2" autocomplete="off" placeholder="Ex.: Suspensa no teto"
+              aria-describedby="fixacaoHintS269D2"><datalist id="fixacaoListaS269D2"></datalist><small
+              id="fixacaoHintS269D2" class="field-hint-s269d2">Texto livre enquanto não houver opções ativas no catálogo.</small></label><label>Estado de conservação *<select id="estadoConservacao"
+              required></select></label><label>Condição *<select id="condicao"
+              required></select></label><label>Responsável *<select id="responsavel"
+              required></select></label><label>Data de instalação<input id="dataInstalacao"
+              type="date"></label><label>Validade<input id="validade" type="date"></label></div>
+        <div class="checks">
+          <div class="photo-section">
+            <label class="photo-label">Fotos</label>
+            <div class="photo-actions">
+              <label class="photo-btn">
+                <input id="fotoInput" type="file" accept="image/*" capture="environment" multiple hidden>
+                Adicionar foto
+              </label>
+              <span id="fotoResumo" class="photo-summary">Nenhuma foto</span>
+            </div>
+            <div id="fotoPreview" class="photo-preview"></div>
+          </div>
+          <label><input id="iluminada" type="checkbox"> Iluminada</label><label><input id="duplaFace" type="checkbox">
+            Dupla face</label><label><input id="qrCode" type="checkbox"> Possui QR Code</label><label><input
+              id="braille" type="checkbox"> Possui Braille</label><label><input id="pictograma" type="checkbox"> Possui
+            pictograma</label>
+        </div>
+        <div class="form-actions"><button type="button" id="cancelarForm">Cancelar</button><button type="submit"
+            class="primary" id="salvar">Salvar registro</button></div>
+      </form>
+    </section>
+
+
+
+
+
+    <section id="adminPanelS14" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box admin-box">
+        <div class="offline-head">
+          <div>
+            <small>S14</small>
+            <h2>Administração e Governança</h2>
+          </div>
+          <button id="fecharAdminS14" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div id="adminSessaoS14" class="admin-session"></div>
+
+        <div class="admin-tabs">
+          <button id="tabUsuariosS14" type="button" class="primary">Usuários</button>
+          <button id="tabPerfisS14" type="button">Perfis e permissões</button><button id="tabAuditoriaS15"
+            type="button">Auditoria</button><button id="tabAcessosS2611A4" type="button">Acessos e dispositivos</button><button id="tabBackupS16" type="button">Backup e integridade</button><button
+            id="tabSaudeS17" type="button">Saúde operacional</button><button id="tabInventarioS18"
+            type="button">Inventário</button><button id="tabPlanosS20" type="button">Planos preventivos</button><button
+            id="tabComunicacaoS22" type="button">Comunicação</button><button id="tabCartografiaS25"
+            type="button">Cartografia</button>
+        </div>
+
+        <section id="adminUsuariosS14">
+          <div class="admin-toolbar">
+            <button id="novoUsuarioS14" class="primary" type="button">Novo usuário</button>
+          </div>
+          <div id="listaUsuariosS14" class="admin-list"></div>
+        </section>
+
+        <section id="adminPerfisS14" hidden>
+          <div id="listaPerfisS14" class="admin-list"></div>
+        </section>
+        <section id="adminAuditoriaS15" hidden>
+          <div class="audit-filters">
+            <input id="auditTextoS15" type="search" placeholder="Buscar usuário, ação, entidade..." aria-label="Filtrar auditoria por texto">
+            <select id="auditAcaoS15" aria-label="Filtrar auditoria por ação">
+              <option value="">Todas as ações</option>
+            </select>
+            <select id="auditResultadoS15" aria-label="Filtrar auditoria por resultado">
+              <option value="">Todos os resultados</option>
+            </select>
+            <select id="auditUsuarioS15" aria-label="Filtrar auditoria por usuário">
+              <option value="">Todos os usuários</option>
+            </select>
+            <button id="auditAtualizarS15" type="button">Atualizar</button>
+          </div>
+          <div id="auditListaS15" class="audit-list"></div>
+        </section>
+        <section id="adminAcessosS2611A4" hidden>
+          <div class="access-intro-s2611a4">
+            <div>
+              <strong>Acessos e dispositivos confiáveis</strong>
+              <span>Gerencie sessões do Mall sem expor PINs ou tokens.</span>
+            </div>
+            <button id="atualizarAcessosS2611A4" type="button">Atualizar</button>
+          </div>
+
+          <div id="accessKpisS2611A4" class="access-kpis-s2611a4"></div>
+
+          <div class="access-filters-s2611a4">
+            <input id="accessTextoS2611A4" type="search" placeholder="Buscar usuário, e-mail ou dispositivo..." aria-label="Filtrar acessos por texto">
+            <select id="accessStatusS2611A4" aria-label="Filtrar acessos por status">
+              <option value="">Todos os status</option>
+              <option value="ATIVA">Ativas</option>
+              <option value="EXPIRADA">Expiradas</option>
+              <option value="USUARIO_INATIVO">Usuário inativo</option>
+              <option value="REVOGADA_ADMIN">Revogadas por dispositivo</option>
+              <option value="REVOGADA_ADMIN_USUARIO">Revogadas por usuário</option>
+              <option value="REVOGADA">Revogadas</option>
+              <option value="REVOGADA_LIMITE">Revogadas por limite</option>
+            </select>
+            <select id="accessTipoS2611A4" aria-label="Filtrar acessos por tipo">
+              <option value="">Todos os tipos</option>
+              <option value="CONFIAVEL">Dispositivo confiável</option>
+              <option value="TEMPORARIA">Sessão temporária</option>
+            </select>
+          </div>
+
+          <div id="accessListaS2611A4" class="access-list-s2611a4">
+            <div class="history-empty">Abra esta aba para carregar os acessos.</div>
+          </div>
+        </section>
+
+        <section id="adminBackupS16" hidden>
+          <div class="backup-actions">
+            <button id="criarBackupS16" type="button" class="primary">Criar backup agora</button>
+            <button id="verificarIntegridadeS16" type="button">Verificar integridade</button>
+            <button id="atualizarBackupsS16" type="button">Atualizar lista</button>
+          </div>
+          <div id="integridadeResumoS16" class="backup-integrity"></div>
+          <div id="listaBackupsS16" class="backup-list"></div>
+        </section>
+        <section id="adminSaudeS17" hidden>
+          <div class="health-actions">
+            <button id="executarSaudeS17" type="button" class="primary">Executar diagnóstico</button>
+            <button id="copiarSaudeS17" type="button">Copiar resumo</button>
+          </div>
+
+          <div id="healthOverallS17" class="health-overall">
+            <div class="history-empty">Execute o diagnóstico operacional.</div>
+          </div>
+
+          <div class="health-grid-s17">
+            <article class="health-card-s17">
+              <h3>Sistema</h3>
+              <div id="healthSistemaS17"></div>
+            </article>
+            <article class="health-card-s17">
+              <h3>Dispositivo</h3>
+              <div id="healthDeviceS17"></div>
+            </article>
+            <article class="health-card-s17">
+              <h3>Sincronização</h3>
+              <div id="healthSyncS17"></div>
+            </article>
+            <article class="health-card-s17">
+              <h3>Backup</h3>
+              <div id="healthBackupS17"></div>
+            </article>
+            <article class="health-card-s17">
+              <h3>Segurança / auditoria</h3>
+              <div id="healthAuditS17"></div>
+            </article>
+            <article class="health-card-s17">
+              <h3>Dados operacionais</h3>
+              <div id="healthDadosS17"></div>
+            </article>
+          </div>
+
+          <section class="health-card-s17 health-wide-s17">
+            <h3>Alertas</h3>
+            <div id="healthAlertasS17"></div>
+          </section>
+
+
+
+
+
+
+          <section class="health-card-s17 health-wide-s17">
+            <h3>Integridade das estruturas</h3>
+            <div id="healthEstruturaS17" class="health-structure-s17"></div>
+          </section>
+        </section>
+        <!-- S20.2: admin sections abaixo são irmãs, não filhas de Saúde -->
+        <section id="adminInventarioS18" hidden>
+          <div class="inventory-actions">
+            <button id="atualizarInventarioS18" type="button" class="primary">Atualizar inventário</button>
+          </div>
+          <div id="inventarioResumoS18" class="inventory-kpis"></div>
+        </section>
+        <section id="adminPlanosS20" hidden>
+          <div class="plans-actions-s20">
+            <button id="novoPlanoS20" type="button" class="primary">Novo plano</button>
+            <button id="aplicarPlanosS20" type="button">Aplicar planos aos ativos</button>
+            <button id="atualizarPlanosS20" type="button">Atualizar</button>
+          </div>
+          <div id="listaPlanosS20" class="plans-list-s20"></div>
+        </section>
+
+        <section id="adminComunicacaoS22" hidden>
+          <div class="comm-actions-s22">
+            <button id="novaRegraS22" type="button" class="primary">Nova regra</button>
+            <button id="processarNotifS22" type="button">Processar agora</button>
+            <button id="atualizarNotifS22" type="button">Atualizar</button>
+          </div>
+
+
+          <div class="auto-card-s221">
+            <div>
+              <strong>Automação horária</strong>
+              <div id="autoStatusS221" class="comm-meta-s22">Carregando status…</div>
+            </div>
+            <div class="auto-actions-s221">
+              <button id="ativarAutoS221" type="button">Ativar automação</button>
+              <button id="desativarAutoS221" type="button">Desativar</button>
+              <button id="executarAutoS221" type="button">Executar teste agora</button><button
+                id="simularEscalamentoS222" type="button">Testar escalonamento</button>
+            </div>
+          </div>
+
+          <div class="comm-info-s22">
+            As regras são criadas desativadas. Nenhum e-mail é enviado automaticamente até você ativar uma regra.
+          </div>
+
+          <h3>Regras</h3>
+          <div id="listaRegrasS22" class="comm-list-s22"></div>
+
+          <h3>Histórico de envios</h3>
+          <div id="historicoNotifS22" class="comm-list-s22"></div>
+        </section>
+
+
+        <section id="adminCartografiaS25" hidden>
+          <div class="carto-head-s25">
+            <div>
+              <small>S25.1</small>
+              <h3>Governança cartográfica dos níveis</h3>
+              <p>Visão consolidada da cartografia 2025, calibrações, áreas especiais e cache offline.</p>
+            </div>
+            <div class="carto-head-actions-s252">
+              <button id="revalidarCartografiaS252" type="button">Revalidar integridade</button>
+              <button id="atualizarCartografiaS25" type="button" class="primary">Atualizar diagnóstico</button>
+            </div>
+          </div>
+
+          <div id="cartoOverallS25" class="carto-overall-s25">
+            <div class="history-empty">Carregue o diagnóstico cartográfico.</div>
+          </div>
+
+          <div id="cartoKpisS25" class="carto-kpis-s25"></div>
+          <div id="cartoQualidadeS252" class="carto-quality-s252"></div>
+
+          <article class="carto-card-s25 carto-wide-s25 carto-pub-card-s255">
+            <div class="carto-card-head-s25">
+              <div>
+                <small>S25.5</small>
+                <h3>Publicação cartográfica</h3>
+                <p>Alterações em rascunho não afetam o mapa operacional até a publicação.</p>
+              </div>
+              <button id="novoRascunhoS255" type="button">Novo rascunho</button>
+            </div>
+
+            <div id="cartoPublicacaoAtualS255">
+              <div class="history-empty">Carregando ciclo de publicação…</div>
+            </div>
+
+            <div id="cartoPublicacaoAcoesS255" class="carto-pub-actions-s255"></div>
+
+            <div class="carto-pub-history-head-s255">
+              <strong>Versões recentes</strong>
+              <button id="atualizarPublicacoesS255" type="button">Atualizar</button>
+            </div>
+            <div id="cartoPublicacoesHistoricoS255"></div>
+
+          </article>
+
+
+          <div class="carto-grid-s25">
+            <article class="carto-card-s25 carto-wide-s25">
+              <div class="carto-card-head-s25">
+                <h3>Plantas de nível</h3>
+                <span id="cartoNiveisStatusS25"></span>
+              </div>
+              <div id="cartoNiveisS25"></div>
+            </article>
+
+            <article class="carto-card-s25 carto-wide-s25">
+              <div class="carto-card-head-s25">
+                <h3>Calibrações Setor ↔ Nível</h3>
+                <button id="abrirCalibracaoAdminS25" type="button">Calibrar / revisar</button>
+              </div>
+              <div id="cartoCalibracoesS25"></div>
+            </article>
+
+            <article class="carto-card-s25 carto-wide-s25">
+              <div class="carto-card-head-s25">
+                <h3>Áreas especiais</h3>
+              </div>
+              <div id="cartoAreasS25"></div>
+              <div class="carto-actions-s25">
+                <button id="abrirAreasN1AdminS25" type="button">Áreas do Nível 1</button>
+                <button id="abrirEstacionamentoAdminS25" type="button">Estacionamento / Nível 3</button>
+              </div>
+            </article>
+
+            <article class="carto-card-s25">
+              <div class="carto-card-head-s25">
+                <h3>Cache offline</h3>
+              </div>
+              <div id="cartoCacheS25"></div>
+              <div class="carto-actions-s25">
+                <button id="abrirCacheAdminS25" type="button">Abrir cache offline</button>
+              </div>
+            </article>
+
+            <article class="carto-card-s25">
+              <div class="carto-card-head-s25">
+                <h3>Integridade</h3>
+              </div>
+              <div id="cartoIntegridadeS25"></div>
+            </article>
+
+            <article class="carto-card-s25 carto-wide-s25">
+              <div class="carto-card-head-s25">
+                <h3>Mapas lógicos</h3>
+              </div>
+              <div id="cartoMapasLogicosS25"></div>
+            </article>
+            <article class="carto-card-s25 carto-wide-s25">
+              <div class="carto-card-head-s25">
+                <div>
+                  <h3>Histórico cartográfico</h3>
+                  <small>Alterações de calibração, áreas e snapshots administrativos.</small>
+                </div>
+                <div class="carto-actions-s25">
+                  <button id="snapshotCartografiaS253" type="button">Criar snapshot</button>
+                  <button id="restaurarCartografiaS254" type="button">Restaurar snapshot</button>
+                  <button id="atualizarHistoricoCartografiaS253" type="button">Atualizar histórico</button>
+                </div>
+              </div>
+
+              <div class="carto-history-filters-s253">
+                <select id="filtroTipoHistoricoS253" aria-label="Filtrar histórico por tipo">
+                  <option value="">Todos os eventos</option>
+                  <option value="RECALIBRACAO">Recalibração</option>
+                  <option value="ALTERACAO_AREA">Alteração de área</option>
+                  <option value="SNAPSHOT">Snapshot</option>
+                </select>
+              </div>
+
+              <div id="cartoHistoricoS253">
+                <div class="history-empty">Nenhum histórico carregado.</div>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+
+
+
+
+      </div>
+    </section>
+
+
+
+
+
+
+    <section id="cartoPublicacaoPanelS255" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box carto-pub-modal-s255">
+        <div class="offline-head">
+          <div>
+            <small>S25.5</small>
+            <h2 id="cartoPublicacaoTituloPanelS255">Novo rascunho cartográfico</h2>
+          </div>
+          <button id="fecharPublicacaoPanelS255" class="icon-btn" type="button">×</button>
+        </div>
+        <div id="cartoPublicacaoConteudoPanelS255"></div>
+      </div>
+    </section>
+
+    <section id="restaurarCartografiaPanelS254" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box carto-restore-box-s254">
+        <div class="offline-head">
+          <div><small>S25.4</small>
+            <h2>Restauração controlada cartográfica</h2>
+          </div>
+          <button id="fecharRestauracaoS254" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div class="carto-restore-warning-s254">
+          <strong>Operação administrativa de alto impacto.</strong>
+          <span>Antes da restauração será criado automaticamente um snapshot de segurança do estado atual.</span>
+        </div>
+
+        <label class="carto-restore-field-s254">Snapshot
+          <select id="snapshotSelecionadoS254">
+            <option value="">Selecione</option>
+          </select>
+        </label>
+
+        <button id="previsualizarRestauracaoS254" type="button">Pré-visualizar alterações</button>
+
+        <div id="previewRestauracaoS254" class="carto-restore-preview-s254">
+          <div class="history-empty">Selecione um snapshot e gere a pré-visualização.</div>
+        </div>
+
+        <label class="carto-restore-field-s254">Motivo da restauração
+          <textarea id="motivoRestauracaoS254" rows="3"
+            placeholder="Explique por que esta configuração precisa ser restaurada."></textarea>
+        </label>
+
+        <label class="carto-restore-field-s254">Confirmação
+          <input id="confirmacaoRestauracaoS254" type="text" autocomplete="off" placeholder="Digite RESTAURAR">
+        </label>
+
+        <div class="carto-restore-actions-s254">
+          <button id="cancelarRestauracaoS254" type="button">Cancelar</button>
+          <button id="executarRestauracaoS254" type="button" class="danger" disabled>Restaurar configuração</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="cartoHistoricoDetalhePanelS253" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box carto-history-detail-s253">
+        <div class="offline-head">
+          <div>
+            <small>S25.3</small>
+            <h2>Detalhes da alteração cartográfica</h2>
+          </div>
+          <button id="fecharHistoricoDetalheS253" class="icon-btn" type="button">×</button>
+        </div>
+        <div id="cartoHistoricoDetalheS253"></div>
+      </div>
+    </section>
+
+    <section id="restorePanelS16" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box restore-box">
+        <div class="offline-head">
+          <div><small>S16</small>
+            <h2>Restauração controlada</h2>
+          </div>
+          <button id="fecharRestoreS16" class="icon-btn" type="button">×</button>
+        </div>
+        <div id="restoreResumoS16"></div>
+        <div id="restoreAbasS16" class="restore-sheets"></div>
+        <label class="restore-confirm">Confirmação
+          <input id="restoreConfirmacaoS16" type="text" placeholder="Digite RESTAURAR">
+        </label>
+        <div class="offline-actions">
+          <button id="cancelarRestoreS16" type="button">Cancelar</button>
+          <button id="executarRestoreS16" type="button" class="danger-btn">Restaurar selecionadas</button>
+        </div>
+      </div>
+    </section>
+
+
+
+    <section id="escalamentoTesteS222" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box s222-box">
+        <div class="offline-head">
+          <div><small>S22.2</small>
+            <h2>Teste de escalonamento</h2>
+          </div>
+          <button id="fecharEscalamentoS222" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div class="comm-info-s22">
+          Este teste envia um e-mail de escalonamento usando um alerta aberto real, mas não altera datas e não consome o
+          cooldown do escalonamento automático.
+        </div>
+
+        <label>Regra
+          <select id="regraEscTesteS222"></select>
+        </label>
+
+        <label>Alerta aberto
+          <select id="alertaEscTesteS222"></select>
+        </label>
+
+        <div id="resumoEscTesteS222" class="s222-summary"></div>
+
+        <div class="offline-actions">
+          <button id="cancelarEscalamentoS222" type="button">Cancelar</button>
+          <button id="enviarEscalamentoS222" type="button" class="primary">Enviar teste de escalonamento</button>
+        </div>
+      </div>
+    </section>
+
+
+
+    <section id="pinUsuarioS223" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box auth-pin-box-s223">
+        <div class="offline-head">
+          <div><small>S22.3</small>
+            <h2>Definir PIN de acesso</h2>
+          </div>
+          <button id="fecharPinUsuarioS223" class="icon-btn" type="button">×</button>
+        </div>
+        <div id="pinUsuarioResumoS223" class="auth-user-summary-s223"></div>
+        <form id="formPinUsuarioS223">
+          <input id="pinUsuarioEmailS223" type="hidden">
+          <label>Novo PIN
+            <input id="novoPinS223" type="password" inputmode="numeric" pattern="[0-9]{6,10}" maxlength="10" required>
+          </label>
+          <label>Confirmar PIN
+            <input id="confirmarPinS223" type="password" inputmode="numeric" pattern="[0-9]{6,10}" maxlength="10"
+              required>
+          </label>
+          <p class="auth-help-s223">Use de 6 a 10 dígitos. Ao trocar o PIN, todas as sessões PIN anteriores desse
+            usuário são revogadas.</p>
+          <div class="offline-actions">
+            <button id="cancelarPinUsuarioS223" type="button">Cancelar</button>
+            <button type="submit" class="primary">Salvar PIN</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="loginMallS223" class="offline-panel auth-panel-s223" hidden aria-hidden="true">
+      <div class="offline-box auth-box-s223">
+        <div class="auth-brand-s223">
+          <small>S22.3</small>
+          <h2>Entrar no Sinalização do Mall</h2>
+          <p>O Google não identificou uma conta autorizada neste navegador. Use o acesso do Mall.</p>
+        </div>
+        <form id="formLoginMallS223">
+          <label>E-mail
+            <input id="loginEmailS223" type="email" autocomplete="username" required placeholder="usuario@empresa.com">
+          </label>
+          <label>PIN
+            <input id="loginPinS223" type="password" inputmode="numeric" pattern="[0-9]{6,10}"
+              autocomplete="current-password" maxlength="10" required placeholder="6 a 10 dígitos">
+          </label>
+          <label class="auth-trusted-device-s2611a2">
+            <input id="loginConfiarDispositivoS2611A2" type="checkbox" checked>
+            <span>Manter acesso neste dispositivo por 7 dias</span>
+          </label>
+          <div class="auth-device-note-s2611a2">
+            Use somente em aparelho pessoal ou corporativo protegido por bloqueio de tela. O PIN não é armazenado.
+          </div>
+          <div id="loginErroS223" class="auth-error-s223" hidden></div>
+          <button id="entrarMallS223" type="submit" class="primary">Entrar</button>
+        </form>
+        <div class="auth-help-s223">
+          O PIN é definido pelo administrador. Nenhuma senha da sua conta Google é utilizada.
+          Em navegadores com várias contas Google, prefira um navegador dedicado ao Mall.
+        </div>
+      </div>
+    </section>
+
+    <section id="regraEditorS22" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box comm-editor-s22">
+        <div class="offline-head">
+          <div><small>S22</small>
+            <h2>Regra de comunicação</h2>
+          </div>
+          <button id="fecharRegraS22" class="icon-btn" type="button">×</button>
+        </div>
+
+        <form id="formRegraS22" class="admin-form">
+          <input id="regraIdS22" type="hidden">
+
+          <label>Nome *
+            <input id="regraNomeS22" type="text" required>
+          </label>
+
+          <div class="comm-grid-s22">
+            <label>Nível mínimo
+              <select id="regraNivelS22">
+                <option value="CRITICO">Crítico</option>
+                <option value="ALTO">Alto</option>
+                <option value="MEDIO" selected>Médio</option>
+                <option value="INFO">Info</option>
+              </select>
+            </label>
+
+            <label>Responsável do alerta
+              <input id="regraRespFiltroS22" type="text" placeholder="Vazio = qualquer">
+            </label>
+
+            <label>Cooldown
+              <input id="regraCooldownS22" type="number" min="1" value="24">
+              <small>horas entre envios do mesmo alerta</small>
+            </label>
+          </div>
+
+          <label>Destinatários *
+            <textarea id="regraDestS22" rows="2" placeholder="email1@empresa.com; email2@empresa.com"></textarea>
+          </label>
+
+          <label>CC
+            <input id="regraCcS22" type="text" placeholder="Opcional">
+          </label>
+
+          <label>Prefixo do assunto
+            <input id="regraAssuntoS22" type="text" value="[Mall]">
+          </label>
+
+          <div class="comm-grid-s22">
+            <label>Escalonar após
+              <input id="regraEscalarHorasS22" type="number" min="0" value="0">
+              <small>0 = sem escalonamento</small>
+            </label>
+
+            <label>Destinatários do escalonamento
+              <input id="regraEscDestS22" type="text" placeholder="Opcional">
+            </label>
+          </div>
+
+          <label class="admin-inline-check">
+            <input id="regraAtivaS22" type="checkbox"> Regra ativa
+          </label>
+
+          <div class="comm-test-s22">
+            <input id="regraTesteEmailS22" type="email" placeholder="E-mail para teste" aria-label="E-mail de teste da regra de notificação">
+            <button id="testarRegraS22" type="button">Enviar teste</button>
+          </div>
+
+          <div class="offline-actions">
+            <button id="cancelarRegraS22" type="button">Cancelar</button>
+            <button type="submit" class="primary">Salvar regra</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="planoEditorS20" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box plan-editor-s20">
+        <div class="offline-head">
+          <div><small>S20</small>
+            <h2>Plano preventivo</h2>
+          </div>
+          <button id="fecharPlanoS20" class="icon-btn" type="button">×</button>
+        </div>
+        <form id="formPlanoS20" class="admin-form">
+          <input id="planoIdS20" type="hidden">
+
+          <label>Nome *
+            <input id="planoNomeS20" type="text" required>
+          </label>
+
+          <label>Prioridade da regra
+            <input id="planoPrioridadeS20" type="number" min="0" step="1" value="10">
+          </label>
+
+          <div class="plan-grid-s20">
+            <label>Tipo de sinalização
+              <input id="planoTipoS20" type="text" placeholder="Vazio = qualquer">
+            </label>
+            <label>Mapa / setor
+              <input id="planoMapaS20" type="text" placeholder="ID_MAPA_SETOR ou vazio">
+            </label>
+            <label>Piso
+              <input id="planoPisoS20" type="text">
+            </label>
+            <label>Responsável atual
+              <input id="planoRespAtualS20" type="text">
+            </label>
+            <label>Conservação
+              <select id="planoConservacaoS20">
+                <option value="">Qualquer</option>
+                <option>Boa</option>
+                <option>Regular</option>
+                <option>Ruim</option>
+                <option>Crítica</option>
+              </select>
+            </label>
+            <label>Condição
+              <input id="planoCondicaoS20" type="text" placeholder="Qualquer">
+            </label>
+          </div>
+
+          <div class="plan-grid-s20">
+            <label>Intervalo *
+              <select id="planoIntervaloS20">
+                <option value="30">30 dias</option>
+                <option value="60">60 dias</option>
+                <option value="90" selected>90 dias</option>
+                <option value="180">180 dias</option>
+                <option value="365">365 dias</option>
+              </select>
+            </label>
+            <label>Antecedência
+              <input id="planoAntecedenciaS20" type="number" min="0" value="7">
+            </label>
+            <label>Responsável pela execução
+              <input id="planoRespExecS20" type="text" placeholder="Opcional">
+            </label>
+          </div>
+
+          <label class="admin-inline-check">
+            <input id="planoAtivoS20" type="checkbox" checked> Plano ativo
+          </label>
+
+          <label>Observação
+            <textarea id="planoObsS20" rows="3"></textarea>
+          </label>
+
+          <div class="offline-actions">
+            <button id="cancelarPlanoS20" type="button">Cancelar</button>
+            <button type="submit" class="primary">Salvar plano</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="usuarioEditorS14" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box admin-editor">
+        <div class="offline-head">
+          <div><small>S14</small>
+            <h2>Usuário</h2>
+          </div>
+          <button id="fecharUsuarioEditorS14" class="icon-btn" type="button">×</button>
+        </div>
+        <form id="formUsuarioS14" class="admin-form">
+          <label>E-mail *
+            <input id="usrEmailS14" type="email" required>
+          </label>
+          <label>Nome
+            <input id="usrNomeS14" type="text">
+          </label>
+          <label>Perfil *
+            <select id="usrPerfilS14" required></select>
+          </label>
+          <label>Setor padrão
+            <input id="usrSetorS14" type="text" placeholder="Opcional">
+          </label>
+          <label class="admin-inline-check">
+            <input id="usrAtivoS14" type="checkbox" checked> Usuário ativo
+          </label>
+          <label>Observação
+            <textarea id="usrObsS14" rows="3"></textarea>
+          </label>
+          <div class="offline-actions">
+            <button id="cancelarUsuarioS14" type="button">Cancelar</button>
+            <button type="submit" class="primary">Salvar usuário</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="perfilEditorS14" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box admin-editor">
+        <div class="offline-head">
+          <div><small>S14</small>
+            <h2>Perfil e permissões</h2>
+          </div>
+          <button id="fecharPerfilEditorS14" class="icon-btn" type="button">×</button>
+        </div>
+        <form id="formPerfilS14" class="admin-form">
+          <label>Perfil
+            <input id="perfilNomeS14" type="text" readonly>
+          </label>
+          <label>Descrição
+            <input id="perfilDescricaoS14" type="text">
+          </label>
+          <div class="permissions-grid">
+            <label><input id="permConsultarMapa" type="checkbox"> Consultar mapa</label>
+            <label><input id="permCriarRegistro" type="checkbox"> Criar registro</label>
+            <label><input id="permEditarRegistro" type="checkbox"> Editar registro</label>
+            <label><input id="permInspecionar" type="checkbox"> Executar inspeções</label>
+            <label><input id="permTratarPendencias" type="checkbox"> Tratar pendências</label>
+            <label><input id="permAcessarCentral" type="checkbox"> Acessar Central</label>
+            <label><input id="permAcessarDashboard" type="checkbox"> Acessar Dashboard</label>
+            <label><input id="permAcessarRelatorios" type="checkbox"> Acessar Relatórios</label>
+            <label><input id="permAdministrar" type="checkbox"> Administrar usuários/perfis</label>
+          </div>
+          <div class="offline-actions">
+            <button id="cancelarPerfilS14" type="button">Cancelar</button>
+            <button type="submit" class="primary">Salvar perfil</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+
+
+
+    <!-- =====================================================
+         S26.9-C2 — CENTRAL DE CONFIGURAÇÕES DE CADASTRO
+         ADMINISTRAÇÃO ONLINE COM AUDITORIA
+         ===================================================== -->
+    <section id="catalogosPanelS269C1" class="offline-panel catalogos-panel-s269c1" hidden aria-hidden="true"
+      aria-labelledby="catalogosTituloS269C1">
+      <div class="offline-box catalogos-box-s269c1">
+        <div class="offline-head catalogos-head-s269c1">
+          <div>
+            <small>S26.9-C2</small>
+            <h2 id="catalogosTituloS269C1">Configurações de cadastro</h2>
+            <p>Administre as classificações utilizadas nos cadastros da aplicação.</p>
+          </div>
+          <button id="fecharCatalogosS269C1" class="icon-btn" type="button"
+            aria-label="Fechar Configurações de cadastro">×</button>
+        </div>
+
+        <div id="catalogosResumoS269C1" class="catalogos-summary-s269c1" aria-live="polite">
+          <div class="catalogos-summary-item-s269c1"><strong>—</strong><span>Catálogos</span></div>
+          <div class="catalogos-summary-item-s269c1"><strong>—</strong><span>Opções</span></div>
+          <div class="catalogos-summary-item-s269c1"><strong>—</strong><span>Ativas</span></div>
+          <div class="catalogos-summary-item-s269c1"><strong>—</strong><span>Inativas</span></div>
+        </div>
+
+        <div class="catalogos-layout-s269c1">
+          <aside class="catalogos-sidebar-s269c1">
+            <div class="catalogos-sidebar-title-s269c1">
+              <strong>Campos</strong>
+              <span>Selecione uma classificação</span>
+            </div>
+            <div id="catalogosGruposS269C1" class="catalogos-groups-s269c1">
+              <div class="catalogos-loading-s269c1">Carregando catálogos…</div>
+            </div>
+          </aside>
+
+          <section class="catalogos-content-s269c1">
+            <div class="catalogos-content-head-s269c1">
+              <div>
+                <span id="catalogoAtualCodigoS269C1" class="catalogos-code-s269c1">—</span>
+                <h3 id="catalogoAtualNomeS269C1">Selecione um catálogo</h3>
+                <p id="catalogoAtualDescricaoS269C1">—</p>
+              </div>
+              <button id="adicionarOpcaoS269C1" type="button" class="primary">+ Adicionar opção</button>
+            </div>
+
+            <div class="catalogos-toolbar-s269c1">
+              <label class="catalogos-search-s269c1">
+                <span>Pesquisar neste catálogo</span>
+                <input id="catalogosBuscaS269C1" type="search" autocomplete="off"
+                  placeholder="Nome, descrição ou código">
+              </label>
+
+              <label>
+                <span>Status</span>
+                <select id="catalogosStatusS269C1">
+                  <option value="">Todas</option>
+                  <option value="ATIVA">Ativas</option>
+                  <option value="INATIVA">Inativas</option>
+                </select>
+              </label>
+
+              <button id="atualizarCatalogosS269C1" type="button">Atualizar</button>
+            </div>
+
+            <div id="catalogoAtualMetaS269C1" class="catalogos-current-meta-s269c1"></div>
+
+            <div id="catalogosListaS269C1" class="catalogos-options-s269c1" aria-live="polite">
+              <div class="catalogos-empty-s269c1">Selecione um catálogo.</div>
+            </div>
+
+            <div class="catalogos-readonly-note-s269c1 catalogos-admin-note-s269c2">
+              <strong>Administração online.</strong>
+              <span>Alterações são auditadas. Renomear ou desativar uma opção não modifica os valores já gravados nos registros históricos.</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- S26.9-C2 — Editor de opção -->
+    <section id="catalogoOpcaoEditorS269C2" class="offline-panel catalogos-editor-panel-s269c2" hidden
+      aria-hidden="true" aria-labelledby="catalogoOpcaoEditorTituloS269C2">
+      <div class="offline-box catalogos-editor-box-s269c2">
+        <div class="offline-head">
+          <div>
+            <small>S26.9-C2</small>
+            <h2 id="catalogoOpcaoEditorTituloS269C2">Opção do catálogo</h2>
+          </div>
+          <button id="fecharCatalogoOpcaoEditorS269C2" class="icon-btn" type="button"
+            aria-label="Fechar editor">×</button>
+        </div>
+
+        <div id="catalogoOpcaoEditorContextoS269C2" class="catalogos-editor-context-s269c2"></div>
+
+        <form id="formCatalogoOpcaoS269C2" class="catalogos-editor-form-s269c2">
+          <input id="catalogoOpcaoModoS269C2" type="hidden" value="NOVO">
+          <input id="catalogoOpcaoIdS269C2" type="hidden" value="">
+
+          <label>
+            Nome da opção *
+            <input id="catalogoOpcaoRotuloS269C2" type="text" maxlength="120" required
+              placeholder="Ex.: Suspensa no teto">
+          </label>
+
+          <label>
+            Descrição
+            <textarea id="catalogoOpcaoDescricaoS269C2" rows="4" maxlength="1000"
+              placeholder="Descrição opcional para orientar a administração."></textarea>
+          </label>
+
+          <label id="catalogoOpcaoAtivoWrapS269C2" class="catalogos-editor-check-s269c2">
+            <input id="catalogoOpcaoAtivoS269C2" type="checkbox">
+            <span>
+              <strong>Ativar imediatamente</strong>
+              <small>Ao ativar, a opção passa a ser considerada publicada e deixa de poder ser excluída fisicamente.</small>
+            </span>
+          </label>
+
+          <div id="catalogoOpcaoEditorAvisoS269C2" class="catalogos-editor-warning-s269c2">
+            Opções novas são criadas inativas por padrão para permitir revisão antes da publicação.
+          </div>
+
+          <div class="offline-actions">
+            <button id="cancelarCatalogoOpcaoS269C2" type="button">Cancelar</button>
+            <button id="salvarCatalogoOpcaoS269C2" type="submit" class="primary">Salvar opção</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- S26.9-C2 — Histórico da opção -->
+    <section id="catalogoHistoricoPanelS269C2" class="offline-panel catalogos-history-panel-s269c2" hidden
+      aria-hidden="true" aria-labelledby="catalogoHistoricoTituloS269C2">
+      <div class="offline-box catalogos-history-box-s269c2">
+        <div class="offline-head">
+          <div>
+            <small>S26.9-C2</small>
+            <h2 id="catalogoHistoricoTituloS269C2">Histórico da opção</h2>
+          </div>
+          <button id="fecharCatalogoHistoricoS269C2" class="icon-btn" type="button"
+            aria-label="Fechar histórico">×</button>
+        </div>
+
+        <div id="catalogoHistoricoResumoS269C2" class="catalogos-history-summary-s269c2"></div>
+        <div id="catalogoHistoricoListaS269C2" class="catalogos-history-list-s269c2">
+          <div class="catalogos-loading-s269c1">Carregando histórico…</div>
+        </div>
+
+        <div class="offline-actions">
+          <button id="fecharCatalogoHistoricoRodapeS269C2" type="button">Fechar</button>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- =====================================================
+         S26.10-R3 — CENTRAL DE REFERÊNCIAS
+         ADMINISTRAÇÃO ONLINE SOBRE PONTOS_REFERENCIA
+         ===================================================== -->
+    <section id="referenciasPanelS2610R3" class="offline-panel referencias-panel-s2610r3" hidden aria-hidden="true"
+      aria-labelledby="referenciasTituloS2610R3">
+      <div class="offline-box referencias-box-s2610r3">
+        <div class="offline-head referencias-head-s2610r3">
+          <div>
+            <small>S26.10-R3</small>
+            <h2 id="referenciasTituloS2610R3">Central de Referências</h2>
+            <p>Pesquise, revise e administre os pontos de referência usados na cartografia do Mall.</p>
+          </div>
+          <button id="fecharReferenciasS2610R3" class="icon-btn" type="button"
+            aria-label="Fechar Central de Referências">×</button>
+        </div>
+
+        <div id="referenciasResumoS2610R3" class="referencias-summary-s2610r3" aria-live="polite">
+          <article><strong>—</strong><span>Todas</span></article>
+          <article><strong>—</strong><span>Ativas</span></article>
+          <article><strong>—</strong><span>Inativas</span></article>
+          <article><strong>—</strong><span>Confirmadas</span></article>
+        </div>
+
+        <div class="referencias-toolbar-s2610r3">
+          <label class="referencias-search-s2610r3">
+            <span>Pesquisar</span>
+            <input id="referenciasBuscaS2610R3" type="search" autocomplete="off"
+              placeholder="Nome, descrição, tipo, subtipo ou ID">
+          </label>
+
+          <label>
+            <span>Mapa / setor</span>
+            <select id="referenciasMapaS2610R3">
+              <option value="">Todos</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Tipo</span>
+            <select id="referenciasTipoS2610R3">
+              <option value="">Todos</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Subtipo</span>
+            <select id="referenciasSubtipoS2610R3">
+              <option value="">Todos</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Status</span>
+            <select id="referenciasStatusS2610R3">
+              <option value="ATIVAS">Ativas</option>
+              <option value="INATIVAS">Inativas</option>
+              <option value="TODAS">Todas</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Confirmação</span>
+            <select id="referenciasConfirmacaoS2610R3">
+              <option value="TODAS">Todas</option>
+              <option value="CONFIRMADAS">Confirmadas</option>
+              <option value="NAO_CONFIRMADAS">Não confirmadas</option>
+            </select>
+          </label>
+
+          <button id="atualizarReferenciasS2610R3" type="button">Atualizar</button>
+        </div>
+
+        <div class="referencias-result-head-s2610r3">
+          <div>
+            <strong id="referenciasResultadoTituloS2610R3">Referências</strong>
+            <span id="referenciasResultadoInfoS2610R3">Carregando…</span>
+          </div>
+          <button id="novaReferenciaS2610R4" class="referencias-new-btn-s2610r4" type="button">
+            + Nova referência
+          </button>
+        </div>
+
+        <div id="referenciasListaS2610R3" class="referencias-list-s2610r3" aria-live="polite">
+          <div class="referencias-loading-s2610r3">Carregando referências…</div>
+        </div>
+
+        <div class="referencias-note-s2610r3">
+          <strong>Administração online.</strong>
+          <span>Editar, ativar, desativar ou reposicionar uma referência não reescreve REGISTROS.REFERENCIA. Remoção física é restrita a referências inativas e sem dependências, com auditoria, tombstone e expurgo de cache.</span>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- =====================================================
+         S26.10-R8 — CATÁLOGOS DE TIPO/SUBTIPO
+         ===================================================== -->
+    <section id="referenciaCatalogoS2610R8" class="offline-panel referencia-catalogo-panel-s2610r8" hidden
+      aria-hidden="true" aria-labelledby="referenciaCatalogoTituloS2610R8">
+      <div class="offline-box referencia-catalogo-box-s2610r8">
+        <div class="offline-head">
+          <div>
+            <small>S26.10-R8</small>
+            <h2 id="referenciaCatalogoTituloS2610R8">Tipos e subtipos de referência</h2>
+            <p>Administre as opções exibidas em Nova referência. Itens já usados podem ser desativados, mas não removidos.</p>
+          </div>
+          <button id="fecharReferenciaCatalogoS2610R8" class="icon-btn" type="button"
+            aria-label="Fechar catálogo">×</button>
+        </div>
+
+        <div id="referenciaCatalogoResumoS2610R8" class="referencia-catalogo-resumo-s2610r8"></div>
+
+        <div class="referencia-catalogo-layout-s2610r8">
+          <section class="referencia-catalogo-col-s2610r8">
+            <div class="referencia-catalogo-col-head-s2610r8">
+              <div>
+                <strong>Tipos</strong>
+                <span>Categoria principal</span>
+              </div>
+              <button id="novoTipoReferenciaS2610R8" type="button" class="primary">+ Tipo</button>
+            </div>
+            <div id="referenciaCatalogoTiposS2610R8" class="referencia-catalogo-lista-s2610r8"></div>
+          </section>
+
+          <section class="referencia-catalogo-col-s2610r8">
+            <div class="referencia-catalogo-col-head-s2610r8">
+              <div>
+                <strong>Subtipos</strong>
+                <span id="referenciaCatalogoSubtiposContextoS2610R8">Selecione um tipo</span>
+              </div>
+              <button id="novoSubtipoReferenciaS2610R8" type="button" class="primary" disabled>+ Subtipo</button>
+            </div>
+            <div id="referenciaCatalogoSubtiposS2610R8" class="referencia-catalogo-lista-s2610r8"></div>
+          </section>
+        </div>
+
+        <form id="formReferenciaCatalogoItemS2610R8" class="referencia-catalogo-editor-s2610r8" hidden>
+          <input id="referenciaCatalogoItemIdS2610R8" type="hidden">
+          <input id="referenciaCatalogoItemNivelS2610R8" type="hidden">
+
+          <div class="referencia-catalogo-editor-head-s2610r8">
+            <div>
+              <strong id="referenciaCatalogoEditorTituloS2610R8">Novo item</strong>
+              <span id="referenciaCatalogoEditorAjudaS2610R8">—</span>
+            </div>
+            <button id="cancelarReferenciaCatalogoItemS2610R8" type="button">Cancelar edição</button>
+          </div>
+
+          <div class="referencia-catalogo-editor-grid-s2610r8">
+            <label id="referenciaCatalogoPaiWrapS2610R8">
+              Tipo pai *
+              <select id="referenciaCatalogoItemPaiS2610R8"></select>
+            </label>
+
+            <label>
+              Código *
+              <input id="referenciaCatalogoItemCodigoS2610R8" type="text" maxlength="60"
+                placeholder="ESCADA_INCENDIO" required>
+            </label>
+
+            <label>
+              Rótulo *
+              <input id="referenciaCatalogoItemRotuloS2610R8" type="text" maxlength="120"
+                placeholder="Escada de incêndio" required>
+            </label>
+
+            <label>
+              Ordem
+              <input id="referenciaCatalogoItemOrdemS2610R8" type="number" min="0" max="9999" step="1" value="100">
+            </label>
+
+            <label class="referencia-catalogo-cor-s2610r8">
+              Cor
+              <span class="referencia-catalogo-cor-controls-s2610r8">
+                <input id="referenciaCatalogoItemCorPickerS2610R8" type="color" value="#171B68">
+                <input id="referenciaCatalogoItemCorHexS2610R8" type="text" maxlength="7"
+                  value="#171B68" placeholder="#171B68">
+              </span>
+            </label>
+
+            <label id="referenciaCatalogoHerdarCorWrapS2610R8"
+              class="referencia-catalogo-check-s2610r8" hidden>
+              <input id="referenciaCatalogoHerdarCorS2610R8" type="checkbox" checked>
+              Herdar cor do Tipo
+            </label>
+
+            <label class="referencia-catalogo-check-s2610r8">
+              <input id="referenciaCatalogoItemAtivoS2610R8" type="checkbox" checked>
+              Ativo em novos cadastros
+            </label>
+          </div>
+
+          <div class="offline-actions">
+            <button id="salvarReferenciaCatalogoItemS2610R8" type="submit" class="primary">Salvar item</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         S26.10-R4 — NOVA REFERÊNCIA NO MAPA
+         ===================================================== -->
+    <section id="referenciaNovaS2610R4" class="offline-panel referencia-nova-panel-s2610r4" hidden
+      aria-hidden="true" aria-labelledby="referenciaNovaTituloS2610R4">
+      <div class="offline-box referencia-nova-box-s2610r4">
+        <div class="offline-head">
+          <div>
+            <small>S26.10-R4</small>
+            <h2 id="referenciaNovaTituloS2610R4">Nova referência</h2>
+            <p>Cadastre os dados e depois defina a posição diretamente na planta.</p>
+          </div>
+          <button id="fecharReferenciaNovaS2610R4" class="icon-btn" type="button"
+            aria-label="Fechar cadastro de nova referência">×</button>
+        </div>
+
+        <form id="formReferenciaNovaS2610R4" class="referencia-nova-form-s2610r4">
+          <div class="referencia-nova-grid-s2610r4">
+            <label class="span2">
+              Mapa / setor *
+              <select id="referenciaNovaMapaS2610R4" required>
+                <option value="">Selecione</option>
+              </select>
+            </label>
+
+            <label class="span2">
+              Nome *
+              <input id="referenciaNovaNomeS2610R4" type="text" maxlength="160" required
+                placeholder="Ex.: Escada de incêndio Torre 2">
+            </label>
+
+            <label>
+              Tipo *
+              <select id="referenciaNovaTipoS2610R4" required>
+                <option value="">Selecione</option>
+              </select>
+            </label>
+
+            <label>
+              Subtipo *
+              <select id="referenciaNovaSubtipoS2610R4" required>
+                <option value="">Selecione o tipo primeiro</option>
+              </select>
+            </label>
+
+            <div class="span2 referencia-catalogo-atalho-s2610r8">
+              <button id="gerenciarCatalogoReferenciaS2610R8" type="button">
+                Gerenciar tipos e subtipos
+              </button>
+              <span>Adicione, edite, desative ou remova opções sem alterar referências históricas.</span>
+              <span id="referenciaNovaCorPreviewS2610R8"
+                class="referencia-cor-preview-s2610r8">
+                <i></i><b>Cor do pin</b>
+              </span>
+            </div>
+
+            <label>
+              Raio de proximidade
+              <input id="referenciaNovaRaioS2610R4" type="number" min="0" max="0.25" step="0.005" value="0.03">
+            </label>
+
+            <label>
+              Prioridade da descrição
+              <input id="referenciaNovaPrioridadeS2610R4" type="number" min="0" max="100" step="1" value="80">
+            </label>
+
+            <label class="span2">
+              Descrição *
+              <textarea id="referenciaNovaDescricaoS2610R4" rows="4" maxlength="500" required
+                placeholder="Ex.: Próximo à escada de incêndio da Torre 2."></textarea>
+            </label>
+          </div>
+
+          <div class="referencia-nova-note-s2610r4">
+            <strong>Próximo passo: posição no mapa.</strong>
+            <span>Ao continuar, a Central será fechada temporariamente e o mapa selecionado será aberto para você tocar no ponto exato da referência.</span>
+          </div>
+
+          <div class="offline-actions">
+            <button id="cancelarReferenciaNovaS2610R4" type="button">Cancelar</button>
+            <button id="definirPosicaoReferenciaS2610R4" type="submit" class="primary">Definir posição no mapa</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="referenciaConfirmarS2610R4" class="offline-panel referencia-confirmar-panel-s2610r4" hidden
+      aria-hidden="true" aria-labelledby="referenciaConfirmarTituloS2610R4">
+      <div class="offline-box referencia-confirmar-box-s2610r4">
+        <div class="offline-head">
+          <div>
+            <small>S26.10-R4</small>
+            <h2 id="referenciaConfirmarTituloS2610R4">Confirmar nova referência</h2>
+          </div>
+          <button id="fecharReferenciaConfirmarS2610R4" class="icon-btn" type="button"
+            aria-label="Cancelar confirmação">×</button>
+        </div>
+
+        <div id="referenciaConfirmarResumoS2610R4" class="referencia-confirmar-resumo-s2610r4"></div>
+
+        <div class="referencia-confirmar-posicao-s2610r4">
+          <strong>Posição selecionada</strong>
+          <span id="referenciaConfirmarMapaS2610R4">—</span>
+          <span id="referenciaConfirmarCoordsS2610R4">—</span>
+        </div>
+
+        <div id="referenciaConfirmarLocalizacaoS2610R4" class="referencia-confirmar-localizacao-s2610r4">
+          <strong>Localização</strong>
+          <span id="referenciaConfirmarLocalizacaoStatusS2610R4">Aguardando identificação…</span>
+          <div id="referenciaConfirmarLocalizacaoLinhasS2610R4">
+            <span>—</span>
+          </div>
+        </div>
+
+        <div class="offline-actions">
+          <button id="escolherOutroPontoS2610R4" type="button">Escolher outro ponto</button>
+          <button id="salvarReferenciaNovaS2610R4" type="button" class="primary">Salvar referência</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Barra operacional exibida sobre o mapa durante a seleção -->
+    <div id="referenciaMapaBarS2610R4" class="referencia-map-bar-s2610r4" hidden aria-live="polite">
+      <div>
+        <small>S26.10-R4 • Nova referência</small>
+        <strong id="referenciaMapaBarTituloS2610R4">Toque no ponto exato da referência</strong>
+        <span id="referenciaMapaBarMapaS2610R4">—</span>
+      </div>
+      <button id="cancelarReferenciaMapaS2610R4" type="button">Cancelar</button>
+    </div>
+
+
+    <!-- =====================================================
+         S26.10-R5 — REPOSICIONAR REFERÊNCIA
+         ===================================================== -->
+    <section id="referenciaReposicionarConfirmarS2610R5" class="offline-panel referencia-reposicionar-panel-s2610r5" hidden
+      aria-hidden="true" aria-labelledby="referenciaReposicionarTituloS2610R5">
+      <div class="offline-box referencia-reposicionar-box-s2610r5">
+        <div class="offline-head">
+          <div>
+            <small>S26.10-R5</small>
+            <h2 id="referenciaReposicionarTituloS2610R5">Confirmar nova posição</h2>
+          </div>
+          <button id="fecharReferenciaReposicionarS2610R5" class="icon-btn" type="button"
+            aria-label="Cancelar reposicionamento">×</button>
+        </div>
+
+        <div id="referenciaReposicionarResumoS2610R5" class="referencia-reposicionar-resumo-s2610r5"></div>
+
+        <div class="referencia-reposicionar-comparacao-s2610r5">
+          <div>
+            <strong>Posição atual</strong>
+            <span id="referenciaReposicionarAtualCoordsS2610R5">—</span>
+            <span id="referenciaReposicionarAtualLocalS2610R5">—</span>
+          </div>
+          <div class="is-new">
+            <strong>Nova posição</strong>
+            <span id="referenciaReposicionarNovaCoordsS2610R5">—</span>
+            <span id="referenciaReposicionarNovaLocalStatusS2610R5">Identificando localização…</span>
+            <div id="referenciaReposicionarNovaLocalS2610R5"></div>
+          </div>
+        </div>
+
+        <div class="offline-actions">
+          <button id="escolherOutroPontoReposicionarS2610R5" type="button">Escolher outro ponto</button>
+          <button id="confirmarReposicionamentoS2610R5" type="button" class="primary">Confirmar reposicionamento</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="referenciaReposicionarBarS2610R5" class="referencia-map-bar-s2610r4 referencia-reposicionar-bar-s2610r5" hidden aria-live="polite">
+      <div>
+        <small>S26.10-R5 • Reposicionar referência</small>
+        <strong id="referenciaReposicionarBarTituloS2610R5">Toque no novo ponto</strong>
+        <span id="referenciaReposicionarBarMapaS2610R5">—</span>
+      </div>
+      <button id="cancelarReposicionamentoMapaS2610R5" type="button">Cancelar</button>
+    </div>
+
+
+    <!-- =====================================================
+         S26.10-R6C — REMOÇÃO SEGURA DE REFERÊNCIA
+         ===================================================== -->
+    <section id="referenciaRemoverS2610R6C" class="offline-panel referencia-remover-panel-s2610r6c" hidden
+      aria-hidden="true" aria-labelledby="referenciaRemoverTituloS2610R6C">
+      <div class="offline-box referencia-remover-box-s2610r6c">
+        <div class="offline-head">
+          <div>
+            <small>S26.10-R6C</small>
+            <h2 id="referenciaRemoverTituloS2610R6C">Remover referência</h2>
+            <p>Esta operação é definitiva na base operacional e só é liberada para referências inativas e sem dependências.</p>
+          </div>
+          <button id="fecharReferenciaRemoverS2610R6C" class="icon-btn" type="button"
+            aria-label="Fechar remoção de referência">×</button>
+        </div>
+
+        <div id="referenciaRemoverResumoS2610R6C" class="referencia-remover-resumo-s2610r6c"></div>
+
+        <div id="referenciaRemoverBloqueioS2610R6C" class="referencia-remover-bloqueio-s2610r6c" hidden>
+          <strong>Remoção bloqueada</strong>
+          <span id="referenciaRemoverBloqueioTextoS2610R6C">—</span>
+        </div>
+
+        <form id="formReferenciaRemoverS2610R6C" class="referencia-remover-form-s2610r6c" hidden>
+          <div class="referencia-remover-warning-s2610r6c">
+            <strong>Atenção</strong>
+            <span>A referência será removida de PONTOS_REFERENCIA. Um tombstone e o snapshot integral serão preservados para auditoria, cache e rollback técnico.</span>
+          </div>
+
+          <label>
+            Motivo
+            <textarea id="referenciaRemoverMotivoS2610R6C" rows="3" maxlength="400"
+              placeholder="Ex.: Referência criada para teste e não utilizada."></textarea>
+          </label>
+
+          <label>
+            Confirme digitando exatamente o ID
+            <code id="referenciaRemoverIdExibidoS2610R6C">—</code>
+            <input id="referenciaRemoverConfirmacaoS2610R6C" type="text" autocomplete="off"
+              placeholder="Cole ou digite o ID_REFERENCIA">
+          </label>
+
+          <div class="offline-actions">
+            <button id="cancelarReferenciaRemoverS2610R6C" type="button">Cancelar</button>
+            <button id="confirmarReferenciaRemoverS2610R6C" type="submit" class="danger" disabled>
+              Remover definitivamente
+            </button>
+          </div>
+        </form>
+
+        <div id="referenciaRemoverLoadingS2610R6C" class="referencia-remover-loading-s2610r6c">
+          Analisando dependências…
+        </div>
+      </div>
+    </section>
+
+    <!-- S26.10-R3 — Editor cadastral da referência -->
+    <section id="referenciaEditorS2610R3" class="offline-panel referencias-editor-panel-s2610r3" hidden
+      aria-hidden="true" aria-labelledby="referenciaEditorTituloS2610R3">
+      <div class="offline-box referencias-editor-box-s2610r3">
+        <div class="offline-head">
+          <div>
+            <small>S26.10-R3</small>
+            <h2 id="referenciaEditorTituloS2610R3">Editar referência</h2>
+          </div>
+          <button id="fecharReferenciaEditorS2610R3" class="icon-btn" type="button"
+            aria-label="Fechar editor de referência">×</button>
+        </div>
+
+        <div id="referenciaEditorContextoS2610R3" class="referencias-editor-context-s2610r3"></div>
+
+        <form id="formReferenciaS2610R3" class="referencias-editor-form-s2610r3">
+          <input id="referenciaIdS2610R3" type="hidden">
+
+          <div class="referencias-editor-grid-s2610r3">
+            <label class="span2">
+              Nome *
+              <input id="referenciaNomeS2610R3" type="text" maxlength="160" required
+                placeholder="Ex.: Ambulatório">
+            </label>
+
+            <label>
+              Tipo *
+              <select id="referenciaTipoEditorS2610R3" required>
+                <option value="">Selecione</option>
+              </select>
+            </label>
+
+            <label>
+              Subtipo *
+              <select id="referenciaSubtipoEditorS2610R3" required>
+                <option value="">Selecione o tipo primeiro</option>
+              </select>
+            </label>
+
+            <datalist id="referenciaTiposDatalistS2610R3"></datalist>
+            <datalist id="referenciaSubtiposDatalistS2610R3"></datalist>
+
+            <label>
+              Raio de proximidade
+              <input id="referenciaRaioS2610R3" type="number" min="0" max="0.25" step="0.005">
+            </label>
+
+            <label>
+              Prioridade da descrição
+              <input id="referenciaPrioridadeS2610R3" type="number" min="0" max="100" step="1">
+            </label>
+
+            <label class="span2">
+              Descrição *
+              <textarea id="referenciaDescricaoS2610R3" rows="4" maxlength="500" required
+                placeholder="Como esta referência deve ser descrita na localização."></textarea>
+            </label>
+          </div>
+
+          <div id="referenciaPosicaoS2610R3" class="referencias-position-s2610r3">
+            <strong>Posição preservada nesta etapa</strong>
+            <span>—</span>
+            <small>Mapa e coordenadas não são alterados pela edição cadastral da R3.</small>
+          </div>
+
+          <div class="offline-actions">
+            <button id="cancelarReferenciaEditorS2610R3" type="button">Cancelar</button>
+            <button id="salvarReferenciaS2610R3" type="submit" class="primary">Salvar alterações</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+
+    <!-- S26.10-C — Torres / Núcleos verticais -->
+    <section id="torresPanelS2610C" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box torres-box-s2610c">
+        <div class="offline-head">
+          <div>
+            <small>S26.10-F</small>
+            <h2>Torres / Núcleos verticais</h2>
+          </div>
+          <button id="fecharTorresS2610C" class="icon-btn" type="button" aria-label="Fechar editor de torres">×</button>
+        </div>
+
+        <div class="torres-banner-s2610c">
+          <strong>Identidade física compartilhada + geometria independente por nível.</strong>
+          <span>O editor mantém o estado de trabalho separado do snapshot operacional. Alterações só entram no mapa após validação e publicação formal.</span>
+        </div>
+
+        <div class="torres-layout-s2610c">
+          <aside class="torres-sidebar-s2610c">
+            <section class="torres-card-s2610c">
+              <div class="torres-card-head-s2610c">
+                <div><small>Entidade física</small><strong>Torre / Núcleo</strong></div>
+                <button id="novaTorreS2610C" type="button">+ Nova torre</button>
+              </div>
+
+              <label class="torres-field-s2610c">
+                Torre cadastrada
+                <select id="torreSelectS2610C"></select>
+              </label>
+
+              <div id="torrePubStatusS2610C" class="torres-pub-status-s2610c">Nenhuma torre selecionada.</div>
+
+              <div class="torres-form-grid-s2610c">
+                <label class="torres-field-s2610c">
+                  Código
+                  <input id="torreCodigoS2610C" type="text" maxlength="20" placeholder="Ex.: T01" autocomplete="off">
+                </label>
+                <label class="torres-field-s2610c">
+                  Status
+                  <select id="torreStatusS2610C"></select>
+                </label>
+                <label class="torres-field-s2610c span2">
+                  Nome
+                  <input id="torreNomeS2610C" type="text" maxlength="120" placeholder="Ex.: Torre 01 — Núcleo central" autocomplete="off">
+                </label>
+                <label class="torres-field-s2610c span2">
+                  Tipo
+                  <select id="torreTipoS2610C"></select>
+                </label>
+              </div>
+
+              <div class="torres-field-s2610c">
+                <span>Níveis atendidos</span>
+                <div id="torreNiveisS2610C" class="torres-checks-s2610c">
+                  <label><input type="checkbox" value="N0"> N0</label>
+                  <label><input type="checkbox" value="N1"> N1</label>
+                  <label><input type="checkbox" value="N2"> N2</label>
+                  <label><input type="checkbox" value="N3"> N3</label>
+                </div>
+              </div>
+
+              <label class="torres-field-s2610c">
+                Observações
+                <textarea id="torreObservacoesS2610C" rows="3" placeholder="Informações físicas ou operacionais da torre."></textarea>
+              </label>
+
+              <button id="salvarTorreS2610C" class="primary torres-full-btn-s2610c" type="button">Salvar identidade física</button>
+              <div id="statusTorreS2610C" class="torres-inline-status-s2610c">Selecione uma torre ou crie uma nova.</div>
+            </section>
+
+            <details class="torres-card-s2610c torres-components-s2610c">
+              <summary>Componentes da torre <span id="componentesTotalS2610C">0</span></summary>
+              <div class="torres-components-body-s2610c">
+                <div class="torres-card-head-s2610c">
+                  <label class="torres-field-s2610c torres-grow-s2610c">
+                    Componente
+                    <select id="componenteSelectS2610C"></select>
+                  </label>
+                  <button id="novoComponenteS2610C" type="button">+ Novo</button>
+                </div>
+
+                <div class="torres-form-grid-s2610c">
+                  <label class="torres-field-s2610c">
+                    Código
+                    <input id="componenteCodigoS2610C" type="text" maxlength="30" placeholder="Ex.: E01" autocomplete="off">
+                  </label>
+                  <label class="torres-field-s2610c">
+                    Status
+                    <select id="componenteStatusS2610C"></select>
+                  </label>
+                  <label class="torres-field-s2610c span2">
+                    Nome
+                    <input id="componenteNomeS2610C" type="text" maxlength="120" placeholder="Ex.: Elevador social 01" autocomplete="off">
+                  </label>
+                  <label class="torres-field-s2610c span2">
+                    Tipo
+                    <select id="componenteTipoS2610C"></select>
+                  </label>
+                </div>
+
+                <div class="torres-field-s2610c">
+                  <span>Níveis do componente</span>
+                  <div id="componenteNiveisS2610C" class="torres-checks-s2610c">
+                    <label><input type="checkbox" value="N0"> N0</label>
+                    <label><input type="checkbox" value="N1"> N1</label>
+                    <label><input type="checkbox" value="N2"> N2</label>
+                    <label><input type="checkbox" value="N3"> N3</label>
+                  </div>
+                </div>
+
+                <label class="torres-field-s2610c">
+                  Observações
+                  <textarea id="componenteObservacoesS2610C" rows="2"></textarea>
+                </label>
+                <button id="salvarComponenteS2610C" class="primary torres-full-btn-s2610c" type="button">Salvar componente</button>
+                <div id="statusComponenteS2610C" class="torres-inline-status-s2610c">Salve a torre antes de cadastrar componentes.</div>
+              </div>
+            </details>
+
+            <details id="torresGovernancaCardS2610F" class="torres-card-s2610c torres-governanca-s2610f" open>
+              <summary>Governança / Publicação <span id="governancaBadgeS2610F">—</span></summary>
+              <div class="torres-governanca-body-s2610f">
+                <div id="governancaResumoS2610F" class="torres-inline-status-s2610c">Carregando ciclo de publicação…</div>
+                <div id="governancaPublicadaS2610F" class="torres-governanca-publicada-s2610f">Nenhuma publicação operacional.</div>
+
+                <label class="torres-field-s2610c">
+                  Título do pacote
+                  <input id="governancaTituloS2610F" type="text" maxlength="120" placeholder="Ex.: Publicação inicial das Torres" autocomplete="off">
+                </label>
+                <label class="torres-field-s2610c">
+                  Motivo
+                  <textarea id="governancaMotivoS2610F" rows="2" placeholder="Descreva a finalidade da publicação."></textarea>
+                </label>
+
+                <div class="torres-governanca-actions-s2610f">
+                  <button id="criarRascunhoTorresS2610F" type="button">Criar pacote</button>
+                  <button id="previewPublicacaoTorresS2610F" type="button">Pré-visualizar</button>
+                  <button id="enviarValidacaoTorresS2610F" type="button">Enviar para validação</button>
+                  <button id="reabrirRascunhoTorresS2610F" type="button">Reabrir</button>
+                  <button id="publicarTorresS2610F" class="primary" type="button">Publicar</button>
+                  <button id="arquivarRascunhoTorresS2610F" type="button">Arquivar pacote</button>
+                </div>
+
+                <div id="governancaPreviewS2610F" class="torres-governanca-preview-s2610f" hidden></div>
+
+                <div class="torres-governanca-snapshot-s2610f">
+                  <div class="torres-card-head-s2610c">
+                    <label class="torres-field-s2610c torres-grow-s2610c">
+                      Snapshot restaurável
+                      <select id="snapshotTorresS2610F"></select>
+                    </label>
+                    <button id="criarSnapshotTorresS2610F" type="button">Criar snapshot</button>
+                  </div>
+                  <button id="restaurarSnapshotTorresS2610F" type="button">Restaurar como rascunho</button>
+                  <small>Restauração altera somente o estado de trabalho. A versão operacional continua intacta até nova publicação.</small>
+                </div>
+
+                <div id="governancaStatusS2610F" class="torres-inline-status-s2610c">Aguardando.</div>
+              </div>
+            </details>
+          </aside>
+
+          <section class="torres-map-column-s2610c">
+            <div class="torres-map-toolbar-s2610c">
+              <label class="torres-field-s2610c">
+                Nível / planta
+                <select id="torreNivelS2610C"></select>
+              </label>
+              <label class="torres-field-s2610c">
+                Status da representação
+                <select id="representacaoStatusS2610C"></select>
+              </label>
+              <div class="torres-map-actions-s2610c">
+                <button id="reiniciarTorrePoligonoS2610C" type="button">Reiniciar pontos</button>
+                <button id="desfazerTorrePontoS2610C" type="button">Desfazer ponto</button>
+                <button id="salvarTorrePoligonoS2610C" class="primary" type="button" disabled>Salvar polígono</button>
+              </div>
+            </div>
+
+            <div id="statusRepresentacaoS2610C" class="area-editor-instruction-s244 torres-map-status-s2610c">
+              Selecione uma torre para carregar a planta e a representação do nível.
+            </div>
+
+            <div id="torreMapaWrapS2610C" class="area-editor-map-s244 torres-map-s2610c">
+              <img id="torreMapaImgS2610C" alt="Planta do nível selecionado">
+              <div id="torreMapaRefsS2610C" class="torres-reference-layer-s2610c"></div>
+              <div id="torreMapaPtsS2610C" class="calibration-points-s242"></div>
+              <svg id="torreMapaSvgS2610C" class="area-editor-svg-s244" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
+            </div>
+
+            <div class="area-editor-footer-s244 torres-map-footer-s2610c">
+              <strong id="torrePoligonoResumoS2610C">0 pontos.</strong>
+              <span id="torrePoligonoAjudaS2610C">Mínimo 4 pontos. Cada nível mantém seu próprio POLIGONO_JSON.</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="areasNivel0PanelS268D" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box area-editor-box-s244 area-n1-box-s246">
+        <div class="offline-head">
+          <div>
+            <small>S26.8-D4</small>
+            <h2>Áreas operacionais do Nível 0</h2>
+          </div>
+          <button id="fecharAreasNivel0S268D" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div class="area-n0-selector-s268d">
+          <label>
+            Categoria
+            <select id="tipoAreaNivel0S268D">
+              <option value="ESTACIONAMENTO">Estacionamento / blocos de vagas</option>
+              <option value="CIRCULACAO_VEICULAR">Circulação veicular / corredores</option>
+              <option value="RAMPA_ACESSO">Rampa / acesso veicular</option>
+              <option value="ACESSO_PEDESTRE">Acesso de pedestres</option>
+              <option value="AREA_EXTERNA">Área externa</option>
+              <option value="SUBSOLO_GERAL">Subsolo geral</option>
+            </select>
+          </label>
+
+          <label>
+            <span id="rotuloBlocoAreaNivel0S268D">Bloco / segmento</span>
+            <select id="blocoAreaNivel0S268D"></select>
+          </label>
+
+          <button id="novoBlocoAreaNivel0S268D" type="button">+ Adicionar bloco</button>
+
+          <div id="statusAreaNivel0S268D" class="area-editor-instruction-s244">
+            Escolha uma categoria e delimite cada bloco físico separadamente.
+          </div>
+
+          <div class="area-n0-actions-s268d">
+            <button id="reiniciarAreaNivel0S268D" type="button">Reiniciar pontos</button>
+            <button id="desfazerPontoAreaNivel0S268D" type="button">Desfazer ponto</button>
+            <button id="salvarAreaNivel0S268D" type="button" class="primary" disabled>Salvar bloco</button>
+          </div>
+        </div>
+
+        <div class="area-n0-guidance-s268d">
+          <strong>Como delimitar:</strong>
+          <span>Vagas e corredores são geometrias diferentes. Na Área externa, E01 é macro agregada e não concorre espacialmente; E02–E05 representam Lateral Azul, Lateral Verde, Frente e Hotel/CDM no Nível 0.</span>
+        </div>
+
+        <div id="areaNivel0WrapS268D" class="area-editor-map-s244 area-n1-map-s246">
+          <img id="areaNivel0ImgS268D" alt="Nível 0 — Subsolo">
+          <div id="areaNivel0PtsS268D" class="calibration-points-s242"></div>
+          <svg id="areaNivel0SvgS268D" class="area-editor-svg-s244" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
+        </div>
+
+        <div class="area-editor-footer-s244">
+          <strong id="areaNivel0ResumoS268D">0 pontos.</strong>
+          <span id="areaNivel0AjudaS268D">
+            Mínimo 4 pontos. Os outros blocos validados da categoria permanecem visíveis como referência.
+          </span>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="areasNivel1PanelS246" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box area-editor-box-s244 area-n1-box-s246">
+        <div class="offline-head">
+          <div>
+            <small>S24.6</small>
+            <h2>Áreas especiais do Nível 1</h2>
+          </div>
+          <button id="fecharAreasNivel1S246" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div class="area-n1-selector-s246">
+          <label>
+            Área
+            <select id="tipoAreaNivel1S246">
+              <option value="HOTEL">Hotel</option>
+              <option value="CENTRAL_DISTRIBUICAO">Central de Distribuição</option>
+              <option value="AREA_EXTERNA_LATERAL_AZUL">Área externa lateral azul</option>
+              <option value="AREA_EXTERNA_LATERAL_VERDE">Área externa lateral verde</option>
+              <option value="AREA_EXTERNA_FRENTE">Área externa frente</option>
+              <option value="AREA_EXTERNA_HOTEL_CDM">Área externa Hotel/CDM</option>
+              <option value="AREA_EXTERNA">Área Externa</option>
+            </select>
+          </label>
+
+          <div id="statusAreaNivel1S246" class="area-editor-instruction-s244">
+            Escolha uma área e carregue a planta.
+          </div>
+
+          <button id="reiniciarAreaNivel1S246" type="button">Reiniciar pontos</button>
+          <button id="desfazerPontoAreaNivel1S246" type="button">Desfazer ponto</button>
+          <button id="salvarAreaNivel1S246" type="button" class="primary" disabled>Salvar área</button>
+        </div>
+
+        <div id="areaNivel1WrapS246" class="area-editor-map-s244 area-n1-map-s246">
+          <img id="areaNivel1ImgS246" alt="Nível 1 — Azul + Verde + áreas especiais">
+          <div id="areaNivel1PtsS246" class="calibration-points-s242"></div>
+          <svg id="areaNivel1SvgS246" class="area-editor-svg-s244" viewBox="0 0 1000 1000"
+            preserveAspectRatio="none"></svg>
+        </div>
+
+        <div class="area-editor-footer-s244">
+          <strong id="areaNivel1ResumoS246">0 pontos.</strong>
+          <span id="areaNivel1AjudaS246">
+            Todas as áreas: mínimo 4 pontos. Áreas externas aceitam até 30 pontos para contornos irregulares.
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <section id="areaVermelhaPanelS244" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box area-editor-box-s244">
+        <div class="offline-head">
+          <div>
+            <small>S24.4</small>
+            <h2>Delimitar Setor Vermelho / Estacionamento</h2>
+          </div>
+          <button id="fecharAreaVermelhaS244" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div class="area-editor-toolbar-s244">
+          <div id="areaVermelhaInstrucaoS244" class="area-editor-instruction-s244">
+            Marque quatro pontos contornando apenas a área do estacionamento, em sentido horário.
+          </div>
+          <button id="reiniciarAreaVermelhaS244" type="button">Reiniciar pontos</button>
+          <button id="salvarAreaVermelhaS244" type="button" class="primary" disabled>Salvar área</button>
+        </div>
+
+        <div id="areaVermelhaWrapS244" class="area-editor-map-s244">
+          <img id="areaVermelhaImgS244" alt="Nível 3 — Roxo + Vermelho / Estacionamento">
+          <div id="areaVermelhaPtsS244" class="calibration-points-s242"></div>
+          <svg id="areaVermelhaSvgS244" class="area-editor-svg-s244" viewBox="0 0 1000 1000"
+            preserveAspectRatio="none"></svg>
+        </div>
+
+        <div class="area-editor-footer-s244">
+          <strong id="areaVermelhaResumoS244">0/4 pontos.</strong>
+          <span>A área Roxa já é identificada pela calibração existente. Esta delimitação deve cobrir somente o
+            estacionamento/Vermelho.</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="calibracaoPanelS242" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box calibration-box-s242">
+        <div class="offline-head">
+          <div>
+            <small>S24.2</small>
+            <h2>Calibração Setor ↔ Nível</h2>
+          </div>
+          <button id="fecharCalibracaoS242" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div class="calibration-toolbar-s242">
+          <label>Par de mapas
+            <select id="calParS242"></select>
+          </label>
+          <button id="carregarCalS242" type="button">Carregar</button>
+          <button id="resetCalS242" type="button">Reiniciar pontos</button>
+          <button id="salvarCalS242" type="button" class="primary" disabled>Salvar calibração</button>
+        </div>
+
+        <div id="calInstrucaoS242" class="calibration-instruction-s242">
+          Selecione um par e clique em Carregar.
+        </div>
+
+        <div class="calibration-grid-s242">
+          <article class="calibration-map-s242">
+            <div class="calibration-map-head-s242">
+              <strong>Setor original</strong>
+              <span id="calOrigemNomeS242">—</span>
+            </div>
+            <div id="calOrigemWrapS242" class="calibration-image-wrap-s242">
+              <img id="calOrigemImgS242" alt="Mapa do setor original">
+              <div id="calOrigemPtsS242" class="calibration-points-s242"></div>
+            </div>
+          </article>
+
+          <article class="calibration-map-s242">
+            <div class="calibration-map-head-s242">
+              <strong>Nível 2025</strong>
+              <span id="calDestinoNomeS242">—</span>
+            </div>
+            <div id="calDestinoWrapS242" class="calibration-image-wrap-s242">
+              <img id="calDestinoImgS242" alt="Planta do nível 2025">
+              <div id="calDestinoPtsS242" class="calibration-points-s242"></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="calibration-footer-s242">
+          <div id="calResumoS242">0/4 pares de pontos.</div>
+          <small>Escolha pontos distantes entre si: cantos, cruzamentos, escadas ou elementos claramente iguais nas duas
+            plantas.</small>
+        </div>
+      </div>
+    </section>
+
+    <section id="relatoriosPanel" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box report-box">
+        <div class="offline-head">
+          <div>
+            <small>S13</small>
+            <h2>Relatório Gerencial</h2>
+          </div>
+          <button id="fecharRelatorios" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div class="report-filtros no-print">
+          <label>De <input id="rpInicio" type="date"></label>
+          <label>Até <input id="rpFim" type="date"></label>
+          <select id="rpMapa" aria-label="Filtrar relatório por mapa">
+            <option value="">Todos os mapas</option>
+          </select>
+          <select id="rpPiso" aria-label="Filtrar relatório por piso">
+            <option value="">Todos os pisos</option>
+          </select>
+          <select id="rpResponsavel" aria-label="Filtrar relatório por responsável">
+            <option value="">Todos os responsáveis</option>
+          </select>
+          <button id="rpGerar" type="button" class="primary">Gerar relatório</button>
+          <button id="btnGerarSlidesS231" type="button" class="slides-generate-btn-s231">Google Apresentação</button>
+          <button id="rpImprimir" type="button">Imprimir / Salvar PDF</button><span id="printHintS13"
+            class="print-hint">No Chrome, desmarque “Cabeçalhos e rodapés”.</span>
+        </div>
+
+        <div id="slidesResultadoS231" class="slides-result-s231" hidden></div>
+
+        <div id="reportDocument" class="report-document">
+          <div class="report-empty">Defina os filtros e clique em “Gerar relatório”.</div>
+        </div>
+      </div>
+    </section>
+    <section id="dashboardPanel" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box dashboard-box">
+        <div class="offline-head">
+          <div>
+            <small>S12</small>
+            <h2>Dashboard Gerencial</h2>
+          </div>
+          <button id="fecharDashboard" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div class="dashboard-filtros">
+          <label>De <input id="dbInicio" type="date"></label>
+          <label>Até <input id="dbFim" type="date"></label>
+          <select id="dbMapa" aria-label="Filtrar dashboard por mapa">
+            <option value="">Todos os mapas</option>
+          </select>
+          <select id="dbPiso" aria-label="Filtrar dashboard por piso">
+            <option value="">Todos os pisos</option>
+          </select>
+          <select id="dbResponsavel" aria-label="Filtrar dashboard por responsável">
+            <option value="">Todos os responsáveis</option>
+          </select>
+          <button id="dbLimpar" type="button">Limpar</button>
+        </div>
+
+        <div id="dbKpis" class="dashboard-kpis"></div>
+
+        <div class="dashboard-grid">
+          <section class="dashboard-card dashboard-health">
+            <h3>Índice de saúde</h3>
+            <div id="dbSaude" class="health-gauge"></div>
+          </section>
+
+          <section class="dashboard-card">
+            <h3>SLA das pendências</h3>
+            <div id="dbSla"></div>
+          </section>
+
+          <section class="dashboard-card">
+            <h3>Status dos ativos</h3>
+            <div id="dbStatusAtivos" class="metric-list"></div>
+          </section>
+
+          <section class="dashboard-card">
+            <h3>Conservação</h3>
+            <div id="dbConservacao" class="metric-list"></div>
+          </section>
+
+          <section class="dashboard-card">
+            <h3>Pendências por prioridade</h3>
+            <div id="dbPrioridade" class="metric-list"></div>
+          </section>
+
+          <section class="dashboard-card">
+            <h3>Pendências por status</h3>
+            <div id="dbPendStatus" class="metric-list"></div>
+          </section>
+
+          <section class="dashboard-card wide">
+            <h3>Responsáveis</h3>
+            <div id="dbResponsaveis" class="dashboard-table"></div>
+          </section>
+
+          <section class="dashboard-card">
+            <h3>Ruas com mais sinalizações</h3>
+            <div id="dbRuas" class="metric-list"></div>
+          </section>
+
+          <section class="dashboard-card">
+            <h3>Falhas mais frequentes</h3>
+            <div id="dbFalhas" class="metric-list"></div>
+          </section>
+
+          <section class="dashboard-card wide">
+            <h3>Evolução das inspeções</h3>
+            <div id="dbEvolucao" class="evolution-list"></div>
+          </section>
+        </div>
+
+        <div class="dashboard-footer-actions">
+          <button id="dbAbrirCentral" type="button" class="primary">Abrir Central de Gestão</button>
+        </div>
+      </div>
+    </section>
+    <section id="centralGestaoPanel" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box central-box">
+        <div class="offline-head">
+          <div>
+            <small>S11</small>
+            <h2>Central de Gestão</h2>
+          </div>
+          <button id="fecharCentralGestao" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div id="centralKpis" class="central-kpis"></div>
+
+        <div class="central-filtros">
+          <input id="cgTexto" type="search" placeholder="Buscar protocolo, rua, título..." aria-label="Filtrar central por texto">
+          <select id="cgMapa" aria-label="Filtrar central por mapa">
+            <option value="">Todos os mapas</option>
+          </select>
+          <select id="cgPiso" aria-label="Filtrar central por piso">
+            <option value="">Todos os pisos</option>
+          </select>
+          <select id="cgResponsavel" aria-label="Filtrar central por responsável">
+            <option value="">Todos os responsáveis</option>
+          </select>
+          <select id="cgPrioridade" aria-label="Filtrar central por prioridade">
+            <option value="">Todas as prioridades</option>
+          </select>
+          <select id="cgStatus" aria-label="Filtrar central por status">
+            <option value="">Todos os status</option>
+          </select>
+          <select id="cgTipo" aria-label="Filtrar central por tipo">
+            <option value="">Todos os tipos</option>
+          </select>
+          <label class="central-check"><input id="cgVencidas" type="checkbox"> Somente vencidas</label>
+          <button id="cgLimpar" type="button">Limpar filtros</button>
+        </div>
+
+        <div id="centralResultadoInfo" class="central-result-info"></div>
+        <div id="centralLista" class="central-list"></div>
+      </div>
+    </section>
+
+
+
+    <section id="reagendarPanelS191" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box reagendar-box-s191">
+        <div class="offline-head">
+          <div><small>S19.1</small>
+            <h2>Reagendar inspeção</h2>
+          </div>
+          <button id="fecharReagendarS191" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div id="reagendarResumoS191" class="inspection-asset"></div>
+
+        <form id="formReagendarS191" class="admin-form">
+          <label>Nova data *
+            <input id="reagendarDataS191" type="date" required>
+          </label>
+
+          <label>Motivo
+            <textarea id="reagendarMotivoS191" rows="3" placeholder="Opcional"></textarea>
+          </label>
+
+          <div class="offline-actions">
+            <button id="cancelarReagendarS191" type="button">Cancelar</button>
+            <button type="submit" class="primary">Salvar reagendamento</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="alertasPanelS21" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box alertas-box-s21">
+        <div class="offline-head">
+          <div><small>S21</small>
+            <h2>Central de alertas</h2>
+          </div>
+          <button id="fecharAlertasS21" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div id="alertasKpisS21" class="alertas-kpis-s21"></div>
+
+        <div class="alertas-filters-s21">
+          <select id="alertasNivelS21" aria-label="Filtrar alertas por nível">
+            <option value="">Todos os níveis</option>
+            <option value="CRITICO">Críticos</option>
+            <option value="ALTO">Altos</option>
+            <option value="MEDIO">Médios</option>
+            <option value="INFO">Informativos</option>
+          </select>
+          <select id="alertasResponsavelS21" aria-label="Filtrar alertas por responsável">
+            <option value="">Todos os responsáveis</option>
+          </select>
+          <select id="alertasStatusS21" aria-label="Filtrar alertas por status">
+            <option value="ABERTOS">Abertos</option>
+            <option value="TODOS">Todos</option>
+          </select>
+          <button id="atualizarAlertasS21" type="button">Atualizar</button>
+        </div>
+
+        <div id="alertasListaS21" class="alertas-list-s21"></div>
+      </div>
+    </section>
+    <section id="agendaPanelS19" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box agenda-box-s19">
+        <div class="offline-head">
+          <div><small>S19</small>
+            <h2>Agenda de inspeções</h2>
+          </div>
+          <button id="fecharAgendaS19" class="icon-btn" type="button">×</button>
+        </div>
+
+        <div id="agendaKpisS19" class="agenda-kpis-s19"></div>
+
+        <div class="agenda-filters-s19">
+          <select id="agendaVisaoS19" aria-label="Visão da agenda">
+            <option value="HOJE">Hoje</option>
+            <option value="7DIAS" selected>Próximos 7 dias</option>
+            <option value="VENCIDAS">Vencidas</option>
+            <option value="PENDENTES">Todas pendentes</option>
+            <option value="TODAS">Todas</option>
+          </select>
+          <select id="agendaResponsavelS19" aria-label="Filtrar agenda por responsável">
+            <option value="">Todos os responsáveis</option>
+          </select>
+          <select id="agendaStatusS19" aria-label="Filtrar agenda por status">
+            <option value="">Todos os status</option>
+            <option value="PENDENTE">Pendente</option>
+            <option value="VENCIDA">Vencida</option>
+            <option value="CONCLUIDA">Concluída</option>
+            <option value="CANCELADA">Cancelada</option>
+          </select>
+          <button id="agendaAtualizarS19" type="button">Atualizar</button>
+        </div>
+
+        <div id="agendaListaS19" class="agenda-list-s19"></div>
+      </div>
+    </section>
+    <section id="cicloVidaPanelS18" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box lifecycle-box">
+        <div class="offline-head">
+          <div><small>S18</small>
+            <h2>Ciclo de vida do ativo</h2>
+          </div>
+          <button id="fecharCicloVidaS18" class="icon-btn" type="button">×</button>
+        </div>
+        <div id="cicloAtivoResumoS18" class="inspection-asset"></div>
+
+        <div class="lifecycle-actions">
+          <button type="button" data-life-action="MOVIMENTACAO">Movimentar</button>
+          <button type="button" data-life-action="RETIRADA">Retirar</button>
+          <button type="button" data-life-action="DESATIVACAO">Desativar</button>
+          <button type="button" data-life-action="SUBSTITUICAO">Substituir</button>
+          <button type="button" data-life-action="REINSTALACAO">Reinstalar</button>
+          <button id="btnExcluirRegistroS236" type="button" class="danger-s236 lifecycle-delete-s236" hidden>
+            Excluir definitivamente da operação
+          </button>
+        </div>
+
+        <div id="cicloHistoricoS18" class="lifecycle-history"></div>
+      </div>
+    </section>
+
+    <section id="eventoCicloEditorS18" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box lifecycle-editor">
+        <div class="offline-head">
+          <div><small>S18</small>
+            <h2 id="eventoCicloTituloS18">Evento de ciclo de vida</h2>
+          </div>
+          <button id="fecharEventoCicloS18" class="icon-btn" type="button">×</button>
+        </div>
+        <form id="formEventoCicloS18" class="admin-form">
+          <input id="eventoTipoS18" type="hidden">
+
+          <label id="lifeMapaWrapS18">Mapa / setor
+            <select id="lifeMapaS18"></select>
+          </label>
+
+          <div id="lifeSelecionarMapaWrapS18" class="life-map-picker">
+            <button id="lifeSelecionarNoMapaS18" type="button" class="primary">Selecionar novo ponto no mapa</button>
+            <div id="lifePontoResumoS18" class="life-point-summary">Você pode informar os campos manualmente ou
+              selecionar o ponto diretamente no mapa.</div>
+          </div>
+
+          <label id="lifeRuaWrapS18">Rua
+            <input id="lifeRuaS18" type="text">
+          </label>
+
+          <label id="lifeTrechoWrapS18">Trecho
+            <input id="lifeTrechoS18" type="text">
+          </label>
+
+          <label id="lifeXWrapS18">X normalizado
+            <input id="lifeXS18" type="number" min="0" max="1" step="any" inputmode="decimal">
+          </label>
+
+          <label id="lifeYWrapS18">Y normalizado
+            <input id="lifeYS18" type="number" min="0" max="1" step="any" inputmode="decimal">
+          </label>
+
+          <label id="lifeSubstitutoWrapS18" hidden>Registro substituto
+            <input id="lifeSubstitutoS18" type="text" placeholder="ID_REGISTRO do novo ativo">
+          </label>
+
+          <label>Motivo
+            <input id="lifeMotivoS18" type="text" required>
+          </label>
+
+          <label>Responsável
+            <input id="lifeResponsavelS18" type="text">
+          </label>
+
+          <label>Observação
+            <textarea id="lifeObsS18" rows="3"></textarea>
+          </label>
+
+          <div class="offline-actions">
+            <button id="cancelarEventoCicloS18" type="button">Cancelar</button>
+            <button type="submit" class="primary">Registrar evento</button>
+          </div>
+        </form>
+      </div>
+    </section>
+    <section id="pendenciasPanel" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box pending-box">
+        <div class="offline-head">
+          <div><small>S10</small>
+            <h2>Pendências e plano de ação</h2>
+          </div><button id="fecharPendenciasS10" class="icon-btn" type="button">×</button>
+        </div>
+        <div id="pendenciasAtivoResumo" class="inspection-asset"></div>
+        <div id="pendenciasResumoS10" class="pending-summary"></div>
+        <div id="pendenciasListaS10" class="pending-list"></div>
+      </div>
+    </section>
+    <section id="inspecaoPanel" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box inspection-box">
+        <div class="offline-head">
+          <div><small>S8</small>
+            <h2>Nova inspeção</h2>
+          </div>
+          <button id="fecharInspecao" class="icon-btn" type="button">×</button>
+        </div>
+        <div id="inspecaoAtivoResumo" class="inspection-asset"></div>
+        <form id="formInspecao">
+          <label>Estado de conservação *
+            <select id="inspEstado" required></select>
+          </label>
+          <label>Condição *
+            <select id="inspCondicao" required></select>
+          </label>
+          <label>Responsável *
+            <select id="inspResponsavel" required></select>
+          </label>
+          <label>Ação recomendada
+            <select id="inspAcao">
+              <option value="">Nenhuma</option>
+              <option>Monitorar</option>
+              <option>Limpar</option>
+              <option>Reparar</option>
+              <option>Substituir</option>
+              <option>Remover</option>
+            </select>
+          </label>
+          <label>Próxima inspeção
+            <input id="inspProxima" type="date">
+          </label>
+          <label>Observação
+            <textarea id="inspObs" rows="4"
+              placeholder="Registre o estado observado, avarias e providências"></textarea>
+          </label>
+
+          <section class="insp-photo-section-s235">
+            <div class="insp-photo-head-s235">
+              <div>
+                <strong>Fotos da inspeção</strong>
+                <small>Fotos atuais do ativo. Mantenha, substitua, remova ou reorganize antes de salvar.</small>
+              </div>
+              <button id="inspAdicionarFotoS235" type="button">Adicionar foto</button>
+            </div>
+
+            <input id="inspFotoInputS235" type="file" accept="image/*" capture="environment" multiple hidden aria-label="Adicionar foto da inspeção">
+            <input id="inspSubstituirFotoInputS235" type="file" accept="image/*" capture="environment" hidden aria-label="Substituir foto da inspeção">
+
+            <div id="inspFotoResumoS235" class="insp-photo-summary-s235">Carregando mídia atual…</div>
+
+            <div class="insp-photo-help-s235">
+              <span>Arraste para reorganizar no desktop.</span>
+              <span>No celular, use ▲/▼ para mudar a ordem.</span>
+            </div>
+
+            <div id="inspFotoPreviewS235" class="photo-preview insp-photo-preview-s235"></div>
+          </section>
+
+          <div class="offline-actions">
+            <button id="cancelarInspecao" type="button">Cancelar</button>
+            <button id="salvarInspecao" type="submit" class="primary">Salvar inspeção</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="historicoPanel" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box history-box">
+        <div class="offline-head">
+          <div><small>S8</small>
+            <h2>Histórico da sinalização</h2>
+          </div>
+          <button id="fecharHistorico" class="icon-btn" type="button">×</button>
+        </div>
+        <div id="historicoAtivoResumo" class="inspection-asset"></div>
+        <div id="historicoLista" class="history-list"></div>
+      </div>
+    </section>
+    <section id="filaPanel" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box queue-box">
+        <div class="offline-head">
+          <div><small>S6</small>
+            <h2>Fila de sincronização</h2>
+          </div><button id="fecharFila" class="icon-btn" type="button">×</button>
+        </div>
+        <p id="filaMensagem">Registros criados sem conexão ficam aqui até a sincronização.</p>
+        <div id="filaLista" class="queue-list"></div>
+        <div class="offline-actions"><button id="sincronizarFila" type="button" class="primary">Sincronizar
+            agora</button></div>
+      </div>
+    </section>
+    <section id="offlinePanel" class="offline-panel" hidden aria-hidden="true">
+      <div class="offline-box">
+        <div class="offline-head">
+          <div><small>S5A</small>
+            <h2>Cache offline</h2>
+          </div><button id="fecharOffline" class="icon-btn" type="button">×</button>
+        </div>
+        <p id="offlineMensagem">Mantenha o cache do dispositivo íntegro e atualizado.</p>
+        <div class="offline-progress">
+          <div id="offlineBar"></div>
+        </div>
+        <div id="offlineResumo" class="offline-resumo">Cache ainda não verificado.</div>
+        <div class="offline-actions"><button id="verificarOffline" type="button">Verificar cache</button><button
+            id="repararOffline" type="button">Reparar cache</button><button id="executarPrepararOffline" type="button"
+            class="primary">Preparar / atualizar offline</button></div>
+      </div>
+    </section>
+    <section class="gate"><strong>Gate S22.5.16:</strong> em celular, valide cabeçalho compacto; abra Fila com itens
+      pendentes e confirme que os registros/fotos aparecem e sincronizam.</section>
+  </main>
+  <?!= include('scripts'); ?>
+  <div id="fotoModalS225" class="modal-overlay gallery-overlay-s225" hidden aria-hidden="true">
+    <section class="gallery-modal-s225" role="dialog" aria-modal="true" aria-labelledby="fotoTituloS225">
+      <header class="gallery-head-s225">
+        <div><small>S22.5</small>
+          <h2 id="fotoTituloS225">Fotos da sinalização</h2>
+        </div>
+        <button id="fotoFecharS225" type="button" class="icon-btn" aria-label="Fechar">×</button>
+      </header>
+      <div id="fotoLoadingS225" class="gallery-loading-s225">Carregando foto…</div>
+      <div id="fotoStageS225" class="gallery-stage-s225" hidden>
+        <button id="fotoAnteriorS225" type="button" class="gallery-nav-s225 gallery-prev-s225"
+          aria-label="Foto anterior">‹</button>
+        <img id="fotoImagemS225" alt="Foto da sinalização">
+        <button id="fotoProximaS225" type="button" class="gallery-nav-s225 gallery-next-s225"
+          aria-label="Próxima foto">›</button>
+      </div>
+      <div id="fotoErroS225" class="history-empty" hidden>Não foi possível carregar esta foto.</div>
+      <footer id="fotoRodapeS225" class="gallery-footer-s225" hidden>
+        <div><strong id="fotoNomeS225"></strong><small id="fotoMetaS225"></small></div>
+        <div class="gallery-count-zoom-s22512"><strong id="fotoContadorS225"></strong><span
+            id="fotoZoomLabelS22512">Zoom 100%</span></div>
+      </footer>
+    </section>
+  </div>
+
+</body>
+
+</html>

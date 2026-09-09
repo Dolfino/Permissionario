@@ -1,0 +1,17 @@
+﻿# Ignorar tudo por padrÃ£o
+**/**
+
+# Permitir manifest e cÃ³digo recursivamente dentro de src/
+!appsscript.json
+!**/*.gs
+!**/*.html
+
+# Ignorar pastas e arquivos auxiliares
+backups/**
+node_modules/**
+.git/**
+*.zip
+*.json
+!appsscript.json
+Prompt.txt
+*.md

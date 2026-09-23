@@ -1,6 +1,14 @@
 # Backups e arquivos compactados
 backups/
 *.zip
+*.tar.gz
+*.backup*
+
+# Rascunhos, testes locais e arquivos temporários (contêm rubricas, dumps e simulações)
+scratch/
+
+# Bases de dados reais e exportações sensíveis
+*.csv
 
 # Dependências e caches
 node_modules/
@@ -17,3 +25,6 @@ Thumbs.db
 .clasprc.json
 *.pem
 *.key
+*.env
+*.env.*
+

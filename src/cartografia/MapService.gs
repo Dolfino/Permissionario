@@ -43,23 +43,211 @@ function appObterImagemMapaS2(idMapa){
 }
 
 function appObterCamadasS2(idMapa){
+  limparCacheLinhasObjetosS2_();
   const id=String(idMapa||'');
   return {
     referencias:pontosDaAbaS2_('PONTOS_REFERENCIA',id,['X_NORMALIZADO','X'],['Y_NORMALIZADO','Y'],['NOME','NOME_REFERENCIA','DESCRICAO'],350),
     cruzamentos:pontosDaAbaS2_('CRUZAMENTOS',id,['X_NORMALIZADO','X'],['Y_NORMALIZADO','Y'],['NOME','NOME_CRUZAMENTO','CODIGO'],350),
-    lojas:pontosDaAbaS2_('LOJAS_MAPA',id,['X_NORMALIZADO','CENTRO_X','X_CENTRO','X'],['Y_NORMALIZADO','CENTRO_Y','Y_CENTRO','Y'],['NUMERO_LOJA','LUC','NOME_LOJA'],1500)
+    lojas:pontosDaAbaS2_('LOJAS_MAPA',id,['X_NORMALIZADO','CENTRO_X','X_CENTRO','X'],['Y_NORMALIZADO','CENTRO_Y','Y_CENTRO','Y'],['NUMERO_LOJA','LUC','NOME_LOJA'],5000),
+    localizacao: typeof appObterDadosLocalizacaoOfflineS6 === 'function' ? appObterDadosLocalizacaoOfflineS6(id) : null
   };
 }
 
+function extrairSiglaRuaS3_(nomeOuIdCorredor) {
+  if (!nomeOuIdCorredor) return '';
+  const s = String(nomeOuIdCorredor).trim();
+
+  const MAPA_SIGLAS = {
+    // SETOR AZUL / GERAL
+    'DOM MANUEL': 'ADMMN', 'ADMMN': 'ADMMN',
+    '25 DE MARÇO': 'R2DMR', '25 DE MARCO': 'R2DMR', 'R2DMR': 'R2DMR',
+    'CORONEL FERRAZ': 'RCRFR', 'RCRFR': 'RCRFR',
+    'SÃO JOSÉ': 'RSJS', 'SAO JOSE': 'RSJS', 'RSJS': 'RSJS',
+    'GOVERNADOR SAMPAIO': 'RGVSM', 'RGVSM': 'RGVSM',
+    'CONDE D\'EU': 'RCNDD', 'CONDE DEU': 'RCNDD', 'RCNDD': 'RCNDD',
+    'GENERAL BEZERRIL': 'RGNBZ', 'RGNBZ': 'RGNBZ',
+    'FLORIANO PEIXOTO': 'RFLPX', 'RFLPX': 'RFLPX',
+    'MAJOR FACUNDO': 'RMJFC', 'RMJFC': 'RMJFC',
+    'BARÃO DO RIO BRANCO': 'RBDRB', 'BARAO DO RIO BRANCO': 'RBDRB', 'RBDRB': 'RBDRB', 'RBRDB': 'RBDRB',
+    'SENADOR POMPEU': 'RSNPM', 'RSNPM': 'RSNPM',
+    'GENERAL SAMPAIO': 'RGNSM', 'RGNSM': 'RGNSM',
+    '24 DE MAIO': 'R24DM', 'R24DM': 'R24DM',
+    'TRISTÃO GONÇALVES': 'RTRGN', 'TRISTAO GONCALVES': 'RTRGN', 'RTRGN': 'RTRGN',
+    'IMPERADOR': 'AVIMP', 'AVENIDA DO IMPERADOR': 'AVIMP', 'DO IMPERADOR': 'AVIMP', 'AVIMP': 'AVIMP',
+    'PRINCESA ISABEL': 'RPRIS', 'RPRIS': 'RPRIS',
+    'ALBERTO NEPOMUCENO': 'AVALN', 'NEPOMUCENO': 'AVALN', 'ALENCASTRO': 'AVALN', 'AVALN': 'AVALN',
+    'CARAPINIMA': 'AVCRP', 'CELSO ROSSI': 'AVCRP', 'AVCRP': 'AVCRP',
+    'JOSE AVELINO': 'RJSA', 'JOSÉ AVELINO': 'RJSA', 'RJSA': 'RJSA',
+
+    // SETOR VERDE & BRANCO & ROXO
+    'ANTONIO POMPEU': 'RANPM', 'ANTÔNIO POMPEU': 'RANPM', 'RANPM': 'RANPM',
+    'METON DE ALENCAR': 'RMDAL', 'METON': 'RMDAL', 'NETON DE ALENCAR': 'RMDAL', 'NEWTON DE ALENCAR': 'RMDAL', 'RNDAL': 'RMDAL', 'RMDAL': 'RMDAL',
+    'CLARINDO DE QUEIROZ': 'RCDQR', 'RCDQR': 'RCDQR',
+    'DUQUE DE CAXIAS': 'ADDCX', 'ADQCX': 'ADDCX', 'ADDCX': 'ADDCX',
+    'DOM PEDRO': 'RDPDI', 'DOM PEDRO I': 'RDPDI', 'RDPD1': 'RDPDI', 'RDPDI': 'RDPDI',
+    'PEDRO PEREIRA': 'RPDPR', 'RPDPR': 'RPDPR',
+    'LIBERATO BARROSO': 'RLBBR', 'RLBBR': 'RLBBR',
+    'GUILHERME ROCHA': 'RGLRC', 'RGLRC': 'RGLRC', 'RGLC': 'RGLRC',
+    'SÃO PAULO': 'RSPL', 'SAO PAULO': 'RSPL', 'SALDANHA MARINHO': 'RSPL', 'RSDMR': 'RSPL', 'RSPL': 'RSPL',
+    'SENADOR ALENCAR': 'RSNAL', 'RSNAL': 'RSNAL',
+    'CASTRO E SILVA': 'RCESL', 'CASTRO SILVA': 'RCESL', 'SILVA JARDIM': 'RCESL', 'GENERAL SILVA JARDIM': 'RCESL', 'RGSJR': 'RCESL', 'RCESL': 'RCESL', 'RCESJ': 'RCESL',
+    'DOUTOR JOÃO MOREIRA': 'RDRJM', 'DR. JOÃO MOREIRA': 'RDRJM', 'JOÃO MOREIRA': 'RDRJM', 'JOAO MOREIRA': 'RDRJM', 'RDJMR': 'RDRJM', 'RDRJM': 'RDRJM',
+    'SENADOR JAGUARIBE': 'RSNJG', 'JAGUARIBE': 'RSNJG', 'RSNGB': 'RSNJG', 'RSNJG': 'RSNJG',
+    'CASTELO BRANCO': 'APCBR', 'PRES. CASTELO BRANCO': 'APCBR', 'APCRB': 'APCBR', 'APCBR': 'APCBR',
+
+    // BRANCO / OUTROS
+    'DOMINGOS OLÍMPIO': 'AVDMO', 'DOMINGOS OLIMPIO': 'AVDMO', 'MONTE ALVERNE': 'AVDMO', 'AVDMO': 'AVDMO',
+    'MONSENHOR TABOSA': 'AVMTB', 'AVMTB': 'AVMTB',
+    'BATURITÉ': 'TVBTR', 'BATURITE': 'TVBTR', 'BENTOS': 'TVBTR', 'TRAVESSA BENTOS': 'TVBTR', 'TVBTR': 'TVBTR',
+    'PARÁ': 'TVPR', 'PARA': 'TVPR', 'PARAIBA': 'TVPR', 'TRAVESSA PARAIBA': 'TVPR', 'TVPR': 'TVPR',
+    '13 DE MAIO': 'A13DM', 'A13DM': 'A13DM',
+
+    // ROXO / VERMELHO / SERVIÇOS
+    'ESTAC. VIS': 'ESTVT', 'ESTVT': 'ESTVT',
+    'COSMETICOS': 'COSM', 'COSM': 'COSM',
+    'SALÃO': 'SLBLZ', 'SALAO': 'SLBLZ', 'SLBLZ': 'SLBLZ',
+    'MONTE': 'AVMNT', 'AVMNT': 'AVMNT',
+    'POSTO POLICIAL': 'PSTPL', 'PSTPL': 'PSTPL',
+    'CAIXA ELETRONICO': 'CXLNC', 'CXLNC': 'CXLNC',
+    'LOJA DESIGN': 'LJDTS', 'LJDTS': 'LJDTS',
+    'PRACA': 'PR', 'PRAÇA': 'PR', 'PR': 'PR',
+    'PRACA ALIMENTACAO': 'PRALM', 'PRAÇA ALIMENTAÇÃO': 'PRALM', 'PRALM': 'PRALM',
+    'PRACA DE ALIMENTACAO': 'PRALM', 'PRAÇA DE ALIMENTAÇÃO': 'PRALM',
+    'PRARE': 'PRARE', 'PRACMM': 'PRACMM',
+    'DOCAV': 'DOCAV', 'DOCAH': 'DOCAH', 'DOCAM': 'DOCAM', 'DOCAF': 'DOCAF', 'DOCAC': 'DOCAC',
+    'BRMALL': 'BRMALL', 'RXMALL': 'RXMALL', 'CORS': 'CORS'
+  };
+
+  const m = s.match(/\(([A-Z0-9]+)\)/i);
+  if (m) {
+    const raw = m[1].toUpperCase();
+    if (MAPA_SIGLAS[raw]) return MAPA_SIGLAS[raw];
+    if (/^[A-Z][A-Z0-9]{1,5}$/.test(raw)) return raw;
+  }
+
+  const upper = s.toUpperCase();
+  for (const [k, v] of Object.entries(MAPA_SIGLAS)) {
+    if (upper.includes(k)) return v;
+  }
+  return '';
+}
+
+var _linhasObjetosCacheS2 = {};
+var _corredoresPolylinesCache_ = {};
+
+function limparCacheLinhasObjetosS2_() {
+  _linhasObjetosCacheS2 = {};
+  _corredoresPolylinesCache_ = {};
+}
+
 function pontosDaAbaS2_(aba,idMapa,xKeys,yKeys,labelKeys,limite){
-  return linhasObjetosS2_(aba).filter(r=>String(r.ID_MAPA_SETOR||'')===idMapa && ativoS2_(r.ATIVO)).slice(0,limite).map(r=>{
+  const max = (typeof limite === 'number' && limite > 0) ? limite : 5000;
+  const rawRows = linhasObjetosS2_(aba);
+  const rows = rawRows.filter(r=>String(r.ID_MAPA_SETOR||'')===idMapa && ativoS2_(r.ATIVO)).slice(0,max);
+
+  let pontos = rows.map(r=>{
     const x=primeiroNumeroS2_(r,xKeys), y=primeiroNumeroS2_(r,yKeys); let label=''; for(const k of labelKeys){if(r[k]!==''&&r[k]!=null){label=String(r[k]);break;}}
-    return {x,y,label};
+    let luc = String(r.LUC || r.CODIGO_LUC || r.ID_ESPACO || '').trim();
+    const numeroLoja = String(r.NUMERO_LOJA || r.NUMERO || '').trim();
+    const nomeLoja = String(r.NOME_LOJA || r.NOME || '').trim();
+    let corredor = String(r.ID_CORREDOR || r.CORREDOR || r.RUA || '').trim();
+    let siglaRua = '';
+
+    if (aba === 'LOJAS_MAPA') {
+      const ehPerimetral = /AVALN|AVCRP|RJSA/i.test(corredor);
+      const ehPontaGaleria = ehPerimetral && (
+        numeroLoja === '1106' ||
+        numeroLoja === '1101' ||
+        numeroLoja.endsWith('06') ||
+        numeroLoja.endsWith('02') ||
+        numeroLoja.endsWith('08') ||
+        numeroLoja.endsWith('12') ||
+        numeroLoja.endsWith('10') ||
+        numeroLoja.endsWith('18') ||
+        numeroLoja.endsWith('20') ||
+        numeroLoja.endsWith('24') ||
+        numeroLoja.endsWith('29') ||
+        numeroLoja.endsWith('33') ||
+        numeroLoja.endsWith('37') ||
+        numeroLoja.endsWith('41') ||
+        numeroLoja.endsWith('43')
+      );
+
+      if ((!corredor || ehPontaGaleria) && typeof localizarCorredorVerticalS3_ === 'function' && Number.isFinite(x) && Number.isFinite(y)) {
+        try {
+          const cv = localizarCorredorVerticalS3_(idMapa, x, y);
+          if (cv) corredor = cv.nome || cv.idCorredor || corredor;
+        } catch (_) {}
+      } else if (!corredor && typeof localizarCorredorS3_ === 'function' && Number.isFinite(x) && Number.isFinite(y)) {
+        try {
+          const c = localizarCorredorS3_(idMapa, x, y);
+          if (c) corredor = c.nome || c.idCorredor || '';
+        } catch (_) {}
+      }
+      siglaRua = extrairSiglaRuaS3_(corredor);
+      if ((!luc || luc === numeroLoja || ehPontaGaleria) && siglaRua && numeroLoja) {
+        luc = siglaRua + numeroLoja;
+      }
+    }
+
+    return {
+      x,
+      y,
+      label: label || numeroLoja || luc,
+      luc,
+      numeroLoja,
+      nomeLoja,
+      corredor,
+      rua: corredor,
+      siglaRua
+    };
   }).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1);
+
+  // S26.10-CEOP: Injeção resiliente dos 16 boxes da Ilha Central do Setor Roxo
+  if (aba === 'LOJAS_MAPA' && idMapa === 'MAP-CFF-N3-ROXO') {
+    const temIlhaCentral = pontos.some(p => p.luc === 'R24DM3241' || (p.numeroLoja === '3241' && p.siglaRua === 'R24DM'));
+    if (!temIlhaCentral && typeof obterDefinicaoBoxesIlhaCentralRoxo_ === 'function') {
+      const defs = obterDefinicaoBoxesIlhaCentralRoxo_();
+      defs.forEach(d => {
+        pontos.push({
+          x: d.x,
+          y: d.y,
+          label: d.numero,
+          luc: d.luc,
+          numeroLoja: d.numero,
+          nomeLoja: d.nome,
+          corredor: d.corredor,
+          rua: d.corredor,
+          siglaRua: extrairSiglaRuaS3_(d.corredor)
+        });
+      });
+      try {
+        if (typeof inserirBoxesIlhaCentralSetorRoxo === 'function') {
+          inserirBoxesIlhaCentralSetorRoxo();
+        }
+      } catch (_) {}
+    }
+  }
+
+  return pontos;
 }
 function primeiroNumeroS2_(r,keys){for(const k of keys){const n=Number(r[k]);if(Number.isFinite(n))return n;}return NaN;}
 function ativoS2_(v){return !['NAO','NÃO','FALSE','0','INATIVO'].includes(String(v??'SIM').trim().toUpperCase());}
-function linhasObjetosS2_(aba){const sh=SpreadsheetApp.getActive().getSheetByName(aba);if(!sh||sh.getLastRow()<2)return[];const vals=sh.getDataRange().getValues(),h=vals[0].map(x=>String(x).trim());return vals.slice(1).map(row=>Object.fromEntries(h.map((k,i)=>[k,row[i]])));}
+function linhasObjetosS2_(aba, forcarLeitura){
+  if (!_linhasObjetosCacheS2) _linhasObjetosCacheS2 = {};
+  if (!forcarLeitura && _linhasObjetosCacheS2[aba]) {
+    return _linhasObjetosCacheS2[aba];
+  }
+  const sh=SpreadsheetApp.getActive().getSheetByName(aba);
+  if(!sh||sh.getLastRow()<2){
+    _linhasObjetosCacheS2[aba] = [];
+    return [];
+  }
+  const vals=sh.getDataRange().getValues(),h=vals[0].map(x=>String(x).trim());
+  const res = vals.slice(1).map(row=>Object.fromEntries(h.map((k,i)=>[k,row[i]])));
+  _linhasObjetosCacheS2[aba] = res;
+  return res;
+}
 function primeiroMapaAtivoId_(){return listarMapasS2_()[0]?.id||'';}
 
 function diagnosticoS2(){
@@ -103,12 +291,35 @@ function appCarregarS3(){
   return Object.assign({},base,{app:{id:APP.ID,nome:APP.NOME,versao:APP.VERSAO,fase:APP.FASE,modoDados:APP.MODO_DADOS},tipos:TIPOS_S3_,finalidades:FINALIDADES_S3_,materiais:MATERIAIS_S3_,estados:ESTADOS_S3_,condicoes:CONDICOES_S3_,responsaveis:RESPONSAVEIS_S3_});
 }
 
-const TIPOS_S3_=['Placa direcional','Placa informativa','Placa institucional','Placa de segurança','Placa de emergência','Placa de setor','Placa de piso','Placa de rua','Placa de loja','Placa de serviço','Totem','Adesivo de piso','Adesivo de parede','Mapa do Mall','Você Está Aqui','Testeira','Painel','Banner','Sinalização temporária','Outra'];
-const FINALIDADES_S3_=['Direcional','Informativa','Segurança','Emergência','Institucional','Operacional','Comercial','Acessibilidade','Serviço','Marketing','Outra'];
-const MATERIAIS_S3_=['PVC','ACM','Acrílico','Metal','Madeira','Vinil','Adesivo','Lona','LED','Outro'];
-const ESTADOS_S3_=['Nova','Boa','Regular','Ruim','Crítica'];
-const CONDICOES_S3_=['Sem problema','Desbotada','Suja','Riscada','Quebrada','Solta','Torta','Descolando','Ilegível','Obstruída','Iluminação defeituosa','Informação desatualizada','Ausente','Outro'];
-const RESPONSAVEIS_S3_=['Marketing','CEOP','Manutenção','Segurança','Limpeza','TI','Lojista','Terceiro','Administração','Outro'];
+const TIPOS_S3_=[
+  'Alvenaria','Hidráulica','Pintura','Serralheria','Marcenaria','Cobertura / Telhado',
+  'Posto de Coleta','Sanitário','Depósito de Resíduos','Jardim Interno','Jardim Externo',
+  'Caixa Acústica','Projetor','Painel de LED','Rack / Switch AV','Microfone / Receptor',
+  'Fancoil / Chiller','Ar Condicionado Split','Quadro Elétrico (QGBT)','Painel Elétrico','Luminária de Emergência','Sensor / Termostato',
+  'Doca de Carga','Cancela','Porta Automática','Escada Rolante','Elevador de Carga / Serviço',
+  'Placa direcional','Placa informativa','Placa de segurança','Totem','Adesivo de piso','Adesivo de parede','Outro'
+];
+const FINALIDADES_S3_=[
+  'Manutenção Predial','Limpeza e Jardinagem','Som e Projeção','Iluminação e Climatização',
+  'Operação Geral','Segurança Operacional','Atendimento Corretivo','Inspeção Preventiva',
+  'Comunicação Visual','Outra'
+];
+const MATERIAIS_S3_=[
+  'Alvenaria / Concreto','Metálico / Alumínio','PVC / Hidráulico','Elétrico / Eletrônico',
+  'Vidro / Acrílico','Madeira / Marcenaria','Gesso / Drywall','Termoplástico / Borracha',
+  'Adesivo / Vinil','Outro'
+];
+const ESTADOS_S3_=['Operacional / Normal','Necessita Reparo','Paralisado / Crítico','Em Manutenção','Novo / Impecável'];
+const CONDICOES_S3_=[
+  'Sem problema / Em funcionamento','Vazamento / Infiltração','Desgaste / Quebrado','Queimado / Sem energia',
+  'Ruído anormal / Vibração','Obstruído / Sujo','Superaquecimento','Falha de comunicação / Sinal',
+  'Ausente / Desativado','Outro'
+];
+const RESPONSAVEIS_S3_=[
+  'CEOP — Manutenção Predial','CEOP — Limpeza e Jardinagem','CEOP — Som e Projeção',
+  'CEOP — Iluminação e Clima','CEOP — Operações Gerais','Segurança Patrimonial',
+  'TI / Automação','Lojista','Terceirizado','Outro'
+];
 
 function appPrepararLocalizacaoS3(dados){
   const d=dados||{}, idMapa=String(d.idMapaSetor||'').trim(), x=numS3_(d.x), y=numS3_(d.y);
@@ -135,6 +346,7 @@ function appCriarRegistroS3(dados){
   const d=dados||{};
   validarRegistroS3_(d);
   const ss=SpreadsheetApp.getActive(), sh=ss.getSheetByName('REGISTROS'); if(!sh) throw new Error('Aba REGISTROS ausente.');
+  garantirColunasCeopAs_(sh);
   const lock=LockService.getScriptLock(); lock.waitLock(30000);
   try{
     const clientEventId=String(d.clientEventId||Utilities.getUuid()).trim();
@@ -160,12 +372,23 @@ function appCriarRegistroS3(dados){
     const torreS2610G=(typeof s2610GNormalizarLocalizacaoRegistro_==='function')
       ? s2610GNormalizarLocalizacaoRegistro_(d)
       : {};
+    const ehAS = String(d.categoriaRegistro || '').toUpperCase() === 'AUTORIZACAO_SERVICO';
+    const categoria = ehAS ? 'AUTORIZACAO_SERVICO' : 'ATIVO';
+
+    const codPatrimonio = String(d.codigoPatrimonio || d.patrimonioTag || d.asBox || '').trim();
+    let txtSinalizacao = String(d.textoSinalizacao || '').trim();
+    if (!ehAS && codPatrimonio && !txtSinalizacao.includes('[TAG: ' + codPatrimonio + ']')) {
+      txtSinalizacao = ('[TAG: ' + codPatrimonio + '] ' + txtSinalizacao).trim();
+    }
     const obj={
       ID_REGISTRO:id,CLIENT_EVENT_ID:clientEventId,PROTOCOLO:protocolo,CRIADO_EM:agora,SINCRONIZADO_EM:agora,
-      STATUS:'ATIVA',TIPO:d.tipo,FINALIDADE:d.finalidade,TITULO:d.titulo,TEXTO_SINALIZACAO:d.textoSinalizacao||'',DESCRICAO:d.descricao,
+      STATUS:ehAS ? 'AUTORIZADO' : 'ATIVA',
+      CATEGORIA_REGISTRO:categoria,
+      TIPO:d.tipo,FINALIDADE:d.finalidade,TITULO:d.titulo,TEXTO_SINALIZACAO:txtSinalizacao,
+      CODIGO_PATRIMONIO:codPatrimonio,DESCRICAO:d.descricao,
       MATERIAL:d.material||'',DIMENSOES:d.dimensoes||'',COR:d.cor||'',FIXACAO:d.fixacao||'',ILUMINADA:simNaoS3_(d.iluminada),DUPLA_FACE:simNaoS3_(d.duplaFace),QR_CODE:simNaoS3_(d.qrCode),BRAILLE:simNaoS3_(d.braille),PICTOGRAMA:simNaoS3_(d.pictograma),
       ESTADO_CONSERVACAO:d.estadoConservacao,CONDICAO:d.condicao,RESPONSAVEL:d.responsavel,
-      ID_MAPA_SETOR:d.idMapaSetor,MAPA:d.mapa,PISO:d.piso,X_NORMALIZADO:Number(d.x),Y_NORMALIZADO:Number(d.y),ID_CORREDOR:d.idCorredor||'',RUA:d.rua||'',ID_SEGMENTO:d.idSegmento||'',TRECHO:d.trecho||'',CRUZAMENTO:d.cruzamento||'',REFERENCIA:d.referencia||'',NUMERO_LOJA:d.numeroLoja||'',LUC:d.luc||'',NOME_LOJA:d.nomeLoja||'',LOCALIZACAO_CONFIRMADA:'SIM',
+      ID_MAPA_SETOR:d.idMapaSetor,MAPA:d.mapa,PISO:d.piso,X_NORMALIZADO:Number(d.x),Y_NORMALIZADO:Number(d.y),ID_CORREDOR:d.idCorredor||'',RUA:d.rua||'',ID_SEGMENTO:d.idSegmento||'',TRECHO:d.trecho||'',CRUZAMENTO:d.cruzamento||'',REFERENCIA:d.referencia||'',NUMERO_LOJA:d.numeroLoja||d.asBox||'',LUC:d.luc||'',NOME_LOJA:d.nomeLoja||d.asNomeTitular||'',LOCALIZACAO_CONFIRMADA:'SIM',
       ID_PLANTA_NIVEL:torreS2610G.idPlantaNivel||'',
       X_NIVEL:Number.isFinite(torreS2610G.xNivel)?torreS2610G.xNivel:'',
       Y_NIVEL:Number.isFinite(torreS2610G.yNivel)?torreS2610G.yNivel:'',
@@ -173,14 +396,35 @@ function appCriarRegistroS3(dados){
       ID_REPRESENTACAO_TORRE:torreS2610G.idRepresentacaoTorre||'',
       VERSAO_GEOMETRIA_TORRE:Number.isFinite(torreS2610G.versaoGeometriaTorre)?torreS2610G.versaoGeometriaTorre:'',
       ORIGEM_TORRE:torreS2610G.origemTorre||'',
-      DATA_INSTALACAO:d.dataInstalacao||'',VALIDADE:d.validade||'',DATA_ULTIMA_INSPECAO:'',PROXIMA_INSPECAO:'',ORIGEM:'WEB_APP',USUARIO:usuario,DEVICE_ID:String(d.deviceId||''),VERSAO_APP:APP.VERSAO
+      DATA_INSTALACAO:d.dataInstalacao||d.asDataInicio||'',VALIDADE:d.validade||d.asDataFim||'',DATA_ULTIMA_INSPECAO:'',PROXIMA_INSPECAO:'',ORIGEM:'WEB_APP',USUARIO:usuario,DEVICE_ID:String(d.deviceId||''),VERSAO_APP:APP.VERSAO,
+      SOLICITANTE_NOME:d.asNomeTitular||'',
+      SOLICITANTE_CPF:d.asCpfTitular||'',
+      SOLICITANTE_CONTATO:d.asContatoTitular||'',
+      SOLICITANTE_EMAIL:d.asEmailSolicitante||d.asEmailTitular||'',
+      TIPO_SOLICITACAO:d.asTipoSolicitacao||'',
+      EMPRESA_INTERNET:d.asEmpresaInternet||'',
+      DATA_INICIO_SERVICO:d.asDataInicio||'',
+      DATA_FIM_SERVICO:d.asDataFim||'',
+      HORARIO_SERVICO:d.asHorarioServico||'',
+      HORARIO_SEGUNDA:d.asHorarioSegunda||'',
+      PRESTADOR_NOME:d.asNomePrestador||'',
+      PRESTADOR_CPF:d.asCpfPrestador||'',
+      PRESTADOR_CONTATO:d.asContatoPrestador||'',
+      PRESTADOR_EMAIL:d.asEmailPrestador||'',
+      PRESTADOR_EMPRESA:d.asEmpresaPrestador||d.asEmpresa||'',
+      EQUIPE_AJUDANTES:d.asEquipe||'',
+      ITENS_RETIRADA:d.asItensRetirada||'',
+      SERVICO_ESTRUTURA:d.asServicoEstrutura||'',
+      SERVICO_REVESTIMENTO:d.asServicoRevestimento||'',
+      SERVICO_INSTALACOES:d.asServicoInstalacoes||'',
+      TERMOS_LGPD_ACEITOS:simNaoS3_(d.asTermosLgpd)
     };
     appendObjetoS3_(sh,obj);
     return {
       ok: true,
       idRegistro: String(id),
       protocolo: String(protocolo),
-      status: 'ATIVA',
+      status: String(obj.STATUS),
       clientEventId: String(clientEventId),
       sincronizadoEm: Utilities.formatDate(agora, APP.TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX")
     };
@@ -188,8 +432,42 @@ function appCriarRegistroS3(dados){
 }
 
 function validarRegistroS3_(d){
-  const obrig=[['tipo','Tipo'],['finalidade','Finalidade'],['titulo','Título'],['descricao','Descrição'],['estadoConservacao','Estado de conservação'],['condicao','Condição'],['responsavel','Responsável'],['idMapaSetor','Mapa']];
-  obrig.forEach(([k,n])=>{if(!String(d[k]??'').trim())throw new Error(`${n} é obrigatório.`);});
+  const ehAS = String(d.categoriaRegistro || '').toUpperCase() === 'AUTORIZACAO_SERVICO';
+  if (ehAS) {
+    const obrigAS = [
+      ['asNomeTitular','Nome do Solicitante'],
+      ['asCpfTitular','CPF do Solicitante'],
+      ['asContatoTitular','Contato do Solicitante'],
+      ['asTipoSolicitacao','Tipo de Solicitação'],
+      ['asDataInicio','Data de Início'],
+      ['asDataFim','Data de Finalização'],
+      ['asHorarioServico','Horário Autorizado'],
+      ['idMapaSetor','Mapa']
+    ];
+    obrigAS.forEach(([k,n])=>{if(!String(d[k]??'').trim())throw new Error(`${n} é obrigatório.`);});
+    const tipo = String(d.asTipoSolicitacao || '').toUpperCase();
+    if (tipo === 'RETIRADA DE PERTENCES') {
+      if (!String(d.asDescricaoServico || d.asEspecificacaoItens || '').trim()) {
+        throw new Error('Especificação de itens a serem retirados é obrigatória.');
+      }
+    } else {
+      if (!String(d.asDescricaoServico || '').trim()) {
+        throw new Error('Descrição do serviço é obrigatória.');
+      }
+      if (!String(d.asNomePrestador || '').trim()) {
+        throw new Error('Nome do prestador de serviços é obrigatório.');
+      }
+      if (!String(d.asCpfPrestador || '').trim()) {
+        throw new Error('CPF do prestador de serviços é obrigatório.');
+      }
+    }
+    if (String(d.asTermosLgpd || '').toUpperCase() !== 'SIM' && d.asTermosLgpd !== true) {
+      throw new Error('É obrigatório o aceite das normas operacionais e LGPD.');
+    }
+  } else {
+    const obrig=[['tipo','Tipo'],['finalidade','Finalidade'],['titulo','Título'],['descricao','Descrição'],['estadoConservacao','Estado de conservação'],['condicao','Condição'],['responsavel','Responsável'],['idMapaSetor','Mapa']];
+    obrig.forEach(([k,n])=>{if(!String(d[k]??'').trim())throw new Error(`${n} é obrigatório.`);});
+  }
   const x=numS3_(d.x),y=numS3_(d.y); if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>1||y<0||y>1)throw new Error('Selecione um ponto válido no mapa.');
   if(String(d.localizacaoConfirmada||'').toUpperCase()!=='SIM')throw new Error('Confirme a localização antes de salvar.');
 }
@@ -204,12 +482,68 @@ function obterRegistroPorClientEventS3_(id){const rows=linhasObjetosS2_('REGISTR
 function appendObjetoS3_(sh,obj){const h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0].map(String);sh.appendRow(h.map(k=>Object.prototype.hasOwnProperty.call(obj,k)?obj[k]:''));}
 function simNaoS3_(v){return ['SIM','TRUE','1',true,1,'on'].includes(v)?'SIM':'NAO';}
 
+function obterCorredoresPolylinesS3_(idMapa, somenteVerticais) {
+  const cacheKey = (somenteVerticais ? 'VERT_' : 'ALL_') + String(idMapa || '').trim();
+  if (_corredoresPolylinesCache_[cacheKey]) {
+    return _corredoresPolylinesCache_[cacheKey];
+  }
+  let corredores = linhasObjetosS2_('CORREDORES').filter(r => String(r.ID_MAPA_SETOR || '') === String(idMapa || '') && ativoS2_(r.ATIVO));
+  if (somenteVerticais) {
+    corredores = corredores.filter(r => !/AVALN|AVCRP|RJSA|A13DM|TVBTR|AVDMO|TVPR|AVMTB/i.test(String(r.ID_CORREDOR || '')));
+  }
+  const pts = linhasObjetosS2_('CORREDOR_PONTOS').filter(r => ativoS2_(r.ATIVO));
+
+  const parsed = corredores.map(c => {
+    const cId = String(c.ID_CORREDOR || '');
+    const p = pts.filter(q => String(q.ID_CORREDOR || '') === cId)
+      .sort((a, b) => Number(a.ORDEM) - Number(b.ORDEM))
+      .map(q => ({ x: numS3_(q.X_NORMALIZADO), y: numS3_(q.Y_NORMALIZADO) }))
+      .filter(q => Number.isFinite(q.x) && Number.isFinite(q.y));
+    return {
+      idCorredor: cId,
+      nome: String(c.NOME || ''),
+      tolerancia: numS3_(c.TOLERANCIA_NORMALIZADA) || 0.025,
+      pontos: p
+    };
+  }).filter(c => c.pontos.length >= 2);
+
+  _corredoresPolylinesCache_[cacheKey] = parsed;
+  return parsed;
+}
+
 function localizarCorredorS3_(idMapa,x,y){
-  const corredores=linhasObjetosS2_('CORREDORES').filter(r=>String(r.ID_MAPA_SETOR||'')===idMapa&&ativoS2_(r.ATIVO));
-  const pts=linhasObjetosS2_('CORREDOR_PONTOS').filter(r=>ativoS2_(r.ATIVO));
+  const corredores = obterCorredoresPolylinesS3_(idMapa, false);
   let best=null;
-  corredores.forEach(c=>{const p=pts.filter(q=>String(q.ID_CORREDOR||'')===String(c.ID_CORREDOR||'')).sort((a,b)=>Number(a.ORDEM)-Number(b.ORDEM)).map(q=>({x:numS3_(q.X_NORMALIZADO),y:numS3_(q.Y_NORMALIZADO)})).filter(q=>Number.isFinite(q.x)&&Number.isFinite(q.y));if(p.length<2)return;const r=distPolylineS3_(x,y,p);const tol=numS3_(c.TOLERANCIA_NORMALIZADA)||0.025;if(r.dist<=Math.max(tol,0.035)&&(!best||r.dist<best.distancia))best={idCorredor:String(c.ID_CORREDOR||''),nome:String(c.NOME||''),distancia:r.dist,percentual:r.percent};});
+  for (let i = 0; i < corredores.length; i++) {
+    const c = corredores[i];
+    const r = distPolylineS3_(x, y, c.pontos);
+    const tol = c.tolerancia || 0.025;
+    if (r.dist <= Math.max(tol, 0.035) && (!best || r.dist < best.distancia)) {
+      best = { idCorredor: c.idCorredor, nome: c.nome, distancia: r.dist, percentual: r.percent };
+    }
+  }
   return best;
+}
+
+function localizarCorredorVerticalS3_(idMapa,x,y){
+  if (Number.isFinite(x) && x < 0.18 && (String(idMapa||'').includes('AMARELO') || String(idMapa||'').includes('ROXO'))) {
+    return {
+      idCorredor: String(idMapa||'').includes('AMARELO') ? 'COR-AM-ADMMN' : 'COR-RX-ADMMN',
+      nome: 'Avenida Dom Manuel',
+      distancia: 0.01,
+      percentual: 0.5
+    };
+  }
+  const corredores = obterCorredoresPolylinesS3_(idMapa, true);
+  let best=null;
+  for (let i = 0; i < corredores.length; i++) {
+    const c = corredores[i];
+    const r = distPolylineS3_(x, y, c.pontos);
+    if (!best || r.dist < best.distancia) {
+      best = { idCorredor: c.idCorredor, nome: c.nome, distancia: r.dist, percentual: r.percent };
+    }
+  }
+  return (best&&best.distancia<=0.055)?best:null;
 }
 function distPolylineS3_(x,y,p){let total=0,lens=[];for(let i=0;i<p.length-1;i++){const l=Math.hypot(p[i+1].x-p[i].x,p[i+1].y-p[i].y);lens.push(l);total+=l;}let best={dist:Infinity,along:0},acc=0;for(let i=0;i<p.length-1;i++){const a=p[i],b=p[i+1],vx=b.x-a.x,vy=b.y-a.y,ll=vx*vx+vy*vy;let t=ll?((x-a.x)*vx+(y-a.y)*vy)/ll:0;t=Math.max(0,Math.min(1,t));const px=a.x+t*vx,py=a.y+t*vy,d=Math.hypot(x-px,y-py);if(d<best.dist)best={dist:d,along:acc+t*lens[i]};acc+=lens[i];}return {dist:best.dist,percent:total?best.along/total:0};}
 function localizarSegmentoS3_(idCorredor,pct){const segs=linhasObjetosS2_('SEGMENTOS_CORREDORES').filter(r=>String(r.ID_CORREDOR||'')===idCorredor&&ativoS2_(r.ATIVO));return segs.find(s=>pct>=numS3_(s.PERCENTUAL_INICIO)&&pct<=numS3_(s.PERCENTUAL_FIM))||segs.sort((a,b)=>Math.abs(((numS3_(a.PERCENTUAL_INICIO)+numS3_(a.PERCENTUAL_FIM))/2)-pct)-Math.abs(((numS3_(b.PERCENTUAL_INICIO)+numS3_(b.PERCENTUAL_FIM))/2)-pct))[0]||null;}
@@ -219,7 +553,90 @@ function primeiroNumeroS3_(r,keys){for(const k of keys){const n=numS3_(r[k]);if(
 function numS3_(v){if(typeof v==='number')return v;const s=String(v??'').trim().replace(',','.');return s===''?NaN:Number(s);}
 function montarResumoLocalizacaoS3_(mapa,corr,seg,cruz,ref,loja){const p=[`${mapa.nome} • Piso ${mapa.piso}`];if(corr?.nome)p.push(corr.nome);if(seg?.NOME_SEGMENTO)p.push(String(seg.NOME_SEGMENTO));if(cruz?.label)p.push(`Próx. ${cruz.label}`);if(ref?.label)p.push(`Ref. ${ref.label}`);if(loja?.NUMERO_LOJA)p.push(`Loja ${loja.NUMERO_LOJA}${loja.LUC?' • LUC '+loja.LUC:''}`);return p.join(' — ');}
 
-function CABECALHOS_REGISTROS_S3_(){return ['ID_REGISTRO','CLIENT_EVENT_ID','PROTOCOLO','CRIADO_EM','SINCRONIZADO_EM','STATUS','TIPO','FINALIDADE','TITULO','TEXTO_SINALIZACAO','DESCRICAO','MATERIAL','DIMENSOES','COR','FIXACAO','ILUMINADA','DUPLA_FACE','QR_CODE','BRAILLE','PICTOGRAMA','ESTADO_CONSERVACAO','CONDICAO','RESPONSAVEL','ID_MAPA_SETOR','MAPA','PISO','X_NORMALIZADO','Y_NORMALIZADO','ID_CORREDOR','RUA','ID_SEGMENTO','TRECHO','CRUZAMENTO','REFERENCIA','NUMERO_LOJA','LUC','NOME_LOJA','LOCALIZACAO_CONFIRMADA','DATA_INSTALACAO','VALIDADE','DATA_ULTIMA_INSPECAO','PROXIMA_INSPECAO','ORIGEM','USUARIO','DEVICE_ID','VERSAO_APP','ID_PLANTA_NIVEL','X_NIVEL','Y_NIVEL','ID_TORRE','CODIGO_TORRE','NOME_TORRE','ID_REPRESENTACAO_TORRE','VERSAO_GEOMETRIA_TORRE','ORIGEM_TORRE'];}
+const COLUNAS_CEOP_AS_REGISTROS = Object.freeze([
+  'CATEGORIA_REGISTRO',
+  'CODIGO_PATRIMONIO',
+  'SOLICITANTE_NOME',
+  'SOLICITANTE_CPF',
+  'SOLICITANTE_CONTATO',
+  'SOLICITANTE_EMAIL',
+  'TIPO_SOLICITACAO',
+  'EMPRESA_INTERNET',
+  'DATA_INICIO_SERVICO',
+  'DATA_FIM_SERVICO',
+  'HORARIO_SERVICO',
+  'HORARIO_SEGUNDA',
+  'PRESTADOR_NOME',
+  'PRESTADOR_CPF',
+  'PRESTADOR_CONTATO',
+  'PRESTADOR_EMAIL',
+  'PRESTADOR_EMPRESA',
+  'EQUIPE_AJUDANTES',
+  'ITENS_RETIRADA',
+  'SERVICO_ESTRUTURA',
+  'SERVICO_REVESTIMENTO',
+  'SERVICO_INSTALACOES',
+  'TERMOS_LGPD_ACEITOS'
+]);
+
+/**
+ * Garante as colunas necessárias para o CEOP e para o módulo de Autorização para Serviço (AS)
+ * na aba REGISTROS, de forma não destrutiva, preservando os dados e formatações já existentes.
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} [shAlvo] Aba REGISTROS (opcional)
+ * @returns {{ ok: boolean, adicionadas: string[], totalColunas: number }}
+ */
+function garantirColunasCeopAs_(shAlvo) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = shAlvo || ss.getSheetByName('REGISTROS');
+  if (!sh) {
+    throw new Error('Aba REGISTROS não encontrada na planilha.');
+  }
+
+  const lastCol = Math.max(1, sh.getLastColumn());
+  const atuais = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(v => String(v || '').trim());
+  const faltantes = COLUNAS_CEOP_AS_REGISTROS.filter(c => !atuais.includes(c));
+
+  if (!faltantes.length) {
+    return { ok: true, adicionadas: [], totalColunas: atuais.length };
+  }
+
+  const maxColAtual = sh.getMaxColumns();
+  const colunasRequeridas = lastCol + faltantes.length;
+  if (maxColAtual < colunasRequeridas) {
+    sh.insertColumnsAfter(maxColAtual, colunasRequeridas - maxColAtual);
+  }
+
+  const startCol = lastCol + 1;
+  const range = sh.getRange(1, startCol, 1, faltantes.length);
+  range.setValues([faltantes])
+    .setFontWeight('bold')
+    .setBackground('#171B68')
+    .setFontColor('#FFFFFF');
+
+  console.log(JSON.stringify({
+    evento: 'CEOP_AS_COLUNAS_INSTALADAS',
+    totalAdicionadas: faltantes.length,
+    colunas: faltantes,
+    ts: new Date().toISOString()
+  }));
+
+  return {
+    ok: true,
+    adicionadas: faltantes,
+    totalColunas: colunasRequeridas
+  };
+}
+
+/**
+ * RPC para verificação e garantia das colunas de AS por administradores.
+ */
+function appGarantirColunasCeopAs() {
+  exigirPermissaoS14_('administrar');
+  return garantirColunasCeopAs_();
+}
+
+function CABECALHOS_REGISTROS_S3_(){return ['ID_REGISTRO','CLIENT_EVENT_ID','PROTOCOLO','CRIADO_EM','SINCRONIZADO_EM','STATUS','TIPO','FINALIDADE','TITULO','TEXTO_SINALIZACAO','DESCRICAO','MATERIAL','DIMENSOES','COR','FIXACAO','ILUMINADA','DUPLA_FACE','QR_CODE','BRAILLE','PICTOGRAMA','ESTADO_CONSERVACAO','CONDICAO','RESPONSAVEL','ID_MAPA_SETOR','MAPA','PISO','X_NORMALIZADO','Y_NORMALIZADO','ID_CORREDOR','RUA','ID_SEGMENTO','TRECHO','CRUZAMENTO','REFERENCIA','NUMERO_LOJA','LUC','NOME_LOJA','LOCALIZACAO_CONFIRMADA','DATA_INSTALACAO','VALIDADE','DATA_ULTIMA_INSPECAO','PROXIMA_INSPECAO','ORIGEM','USUARIO','DEVICE_ID','VERSAO_APP','ID_PLANTA_NIVEL','X_NIVEL','Y_NIVEL','ID_TORRE','CODIGO_TORRE','NOME_TORRE','ID_REPRESENTACAO_TORRE','VERSAO_GEOMETRIA_TORRE','ORIGEM_TORRE'].concat(COLUNAS_CEOP_AS_REGISTROS);}
 function garantirCabecalhoS3_(aba,headers){const ss=SpreadsheetApp.getActive();let sh=ss.getSheetByName(aba);if(!sh)sh=ss.insertSheet(aba);if(sh.getMaxColumns()<headers.length)sh.insertColumnsAfter(sh.getMaxColumns(),headers.length-sh.getMaxColumns());sh.getRange(1,1,1,headers.length).setValues([headers]).setFontWeight('bold').setBackground('#171B68').setFontColor('#FFFFFF');sh.setFrozenRows(1);}
 function diagnosticoS3(){const ss=SpreadsheetApp.getActive(),cfg=lerConfigComoObjeto_(ss),checks=[];check_(checks,'APP_ID',cfg.APP_ID===APP.ID,cfg.APP_ID);check_(checks,'APP_VERSAO',cfg.APP_VERSAO===APP.VERSAO,cfg.APP_VERSAO);check_(checks,'APP_FASE',cfg.APP_FASE===APP.FASE,cfg.APP_FASE);check_(checks,'MODO_DADOS',cfg.MODO_DADOS===APP.MODO_DADOS,cfg.MODO_DADOS);check_(checks,'S2_INSTALADA',cfg.S2_STATUS==='INSTALADO',cfg.S2_STATUS);const sh=ss.getSheetByName('REGISTROS');check_(checks,'ABA_REGISTROS',!!sh,sh?'OK':'ausente');if(sh){const h=sh.getRange(1,1,1,Math.max(1,sh.getLastColumn())).getDisplayValues()[0];const falt=CABECALHOS_REGISTROS_S3_().filter(x=>!h.includes(x));check_(checks,'CABECALHO_REGISTROS',falt.length===0,falt.length?'faltando: '+falt.join(', '):`${CABECALHOS_REGISTROS_S3_().length} colunas`);}const mapas=listarMapasS2_();check_(checks,'MAPAS_ATIVOS',mapas.length===5,`${mapas.length} mapa(s)`);['CORREDORES','CORREDOR_PONTOS','SEGMENTOS_CORREDORES','CRUZAMENTOS','PONTOS_REFERENCIA','LOJAS_MAPA'].forEach(a=>check_(checks,`LOCALIZACAO_${a}`,!!ss.getSheetByName(a),ss.getSheetByName(a)?'OK':'ausente'));const falhas=checks.filter(c=>!c.ok);return {ok:!falhas.length,totalChecks:checks.length,totalFalhas:falhas.length,checks};}
 function mostrarDiagnosticoS3(){const d=diagnosticoS3();SpreadsheetApp.getUi().alert('Diagnóstico S3',`${d.ok?'CADASTRO S3 OK':'HÁ PENDÊNCIAS'}\n\n${d.checks.map(c=>`${c.ok?'✅':'❌'} ${c.nome}: ${c.detalhe}`).join('\n')}`,SpreadsheetApp.getUi().ButtonSet.OK);return d;}
@@ -288,7 +705,28 @@ function appListarRegistrosMapaS4(idMapaSetor) {
       nomeTorre: String(idx.NOME_TORRE == null ? '' : (r[idx.NOME_TORRE] || '')),
       idRepresentacaoTorre: String(idx.ID_REPRESENTACAO_TORRE == null ? '' : (r[idx.ID_REPRESENTACAO_TORRE] || '')),
       versaoGeometriaTorre: idx.VERSAO_GEOMETRIA_TORRE == null ? 0 : Number(r[idx.VERSAO_GEOMETRIA_TORRE] || 0),
-      origemTorre: String(idx.ORIGEM_TORRE == null ? '' : (r[idx.ORIGEM_TORRE] || ''))
+      origemTorre: String(idx.ORIGEM_TORRE == null ? '' : (r[idx.ORIGEM_TORRE] || '')),
+      categoriaRegistro: String(idx.CATEGORIA_REGISTRO == null ? '' : (r[idx.CATEGORIA_REGISTRO] || '')),
+      asNomeTitular: String(idx.SOLICITANTE_NOME == null ? '' : (r[idx.SOLICITANTE_NOME] || '')),
+      asCpfTitular: String(idx.SOLICITANTE_CPF == null ? '' : (r[idx.SOLICITANTE_CPF] || '')),
+      asContatoTitular: String(idx.SOLICITANTE_CONTATO == null ? '' : (r[idx.SOLICITANTE_CONTATO] || '')),
+      asEmailSolicitante: String(idx.SOLICITANTE_EMAIL == null ? '' : (r[idx.SOLICITANTE_EMAIL] || '')),
+      asTipoSolicitacao: String(idx.TIPO_SOLICITACAO == null ? '' : (r[idx.TIPO_SOLICITACAO] || '')),
+      asEmpresaInternet: String(idx.EMPRESA_INTERNET == null ? '' : (r[idx.EMPRESA_INTERNET] || '')),
+      asDataInicio: String(idx.DATA_INICIO_SERVICO == null ? '' : (r[idx.DATA_INICIO_SERVICO] || '')),
+      asDataFim: String(idx.DATA_FIM_SERVICO == null ? '' : (r[idx.DATA_FIM_SERVICO] || '')),
+      asHorarioServico: String(idx.HORARIO_SERVICO == null ? '' : (r[idx.HORARIO_SERVICO] || '')),
+      asHorarioSegunda: String(idx.HORARIO_SEGUNDA == null ? '' : (r[idx.HORARIO_SEGUNDA] || '')),
+      asNomePrestador: String(idx.PRESTADOR_NOME == null ? '' : (r[idx.PRESTADOR_NOME] || '')),
+      asCpfPrestador: String(idx.PRESTADOR_CPF == null ? '' : (r[idx.PRESTADOR_CPF] || '')),
+      asContatoPrestador: String(idx.PRESTADOR_CONTATO == null ? '' : (r[idx.PRESTADOR_CONTATO] || '')),
+      asEmailPrestador: String(idx.PRESTADOR_EMAIL == null ? '' : (r[idx.PRESTADOR_EMAIL] || '')),
+      asEmpresaPrestador: String(idx.PRESTADOR_EMPRESA == null ? '' : (r[idx.PRESTADOR_EMPRESA] || '')),
+      asEquipe: String(idx.EQUIPE_AJUDANTES == null ? '' : (r[idx.EQUIPE_AJUDANTES] || '')),
+      asItensRetirada: String(idx.ITENS_RETIRADA == null ? '' : (r[idx.ITENS_RETIRADA] || '')),
+      asServicoEstrutura: String(idx.SERVICO_ESTRUTURA == null ? '' : (r[idx.SERVICO_ESTRUTURA] || '')),
+      asServicoRevestimento: String(idx.SERVICO_REVESTIMENTO == null ? '' : (r[idx.SERVICO_REVESTIMENTO] || '')),
+      asServicoInstalacoes: String(idx.SERVICO_INSTALACOES == null ? '' : (r[idx.SERVICO_INSTALACOES] || ''))
     }))
     .filter(x => x.x >= 0 && x.x <= 1 && x.y >= 0 && x.y <= 1);
 }

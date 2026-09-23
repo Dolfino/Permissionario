@@ -101,7 +101,7 @@ var CatalogosDominioServiceS269 = (function () {
         bootstrap: 'tipos',
         ordem: 1,
         descricao:
-          'Classificação do tipo de sinalização.'
+          'Classificação do tipo de ativo ou subsistema operacional.'
       },
       {
         codigo: 'FINALIDADE',
@@ -110,7 +110,7 @@ var CatalogosDominioServiceS269 = (function () {
         bootstrap: 'finalidades',
         ordem: 2,
         descricao:
-          'Finalidade operacional ou de comunicação da sinalização.'
+          'Frente operacional ou área de atendimento do CEOP.'
       },
       {
         codigo: 'MATERIAL',
@@ -119,7 +119,7 @@ var CatalogosDominioServiceS269 = (function () {
         bootstrap: 'materiais',
         ordem: 3,
         descricao:
-          'Material predominante da sinalização.'
+          'Material ou tecnologia predominante do ativo.'
       },
       {
         codigo: 'FIXACAO',
@@ -128,7 +128,7 @@ var CatalogosDominioServiceS269 = (function () {
         bootstrap: null,
         ordem: 4,
         descricao:
-          'Forma de instalação ou fixação da sinalização.'
+          'Forma de montagem ou suporte técnico do equipamento.'
       },
       {
         codigo: 'ESTADO_CONSERVACAO',
@@ -146,7 +146,7 @@ var CatalogosDominioServiceS269 = (function () {
         bootstrap: 'condicoes',
         ordem: 6,
         descricao:
-          'Condição visual ou problema observado.'
+          'Condição de funcionamento ou anomalia operacional observada.'
       },
       {
         codigo: 'RESPONSAVEL',
@@ -155,7 +155,7 @@ var CatalogosDominioServiceS269 = (function () {
         bootstrap: 'responsaveis',
         ordem: 7,
         descricao:
-          'Área ou parte responsável pela sinalização.'
+          'Equipe ou setor responsável pelo ativo/atendimento.'
       }
     ];
   }

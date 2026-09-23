@@ -1172,30 +1172,21 @@ function appCoresReferenciasMapaS2610R8Fix2(idMapaSetor) {
     };
   }
 
-  const usos = s2610R8Usos_(ss);
-  const itens = s2610R8Rows_(shCat)
-    .map(function(r) {
-      return s2610R8Serializar_(r, usos);
-    });
-
+  // S26.10-R8-FIX5: Modo otimizado de cores de referências para o mapa.
+  // Não calcula estatísticas de uso em PONTOS_REFERENCIA, extraindo cores diretamente.
+  const rowsCat = s2610R8Rows_(shCat);
   const coresTipo = {};
   const coresSub = {};
 
-  itens.forEach(function(i) {
-    if (i.nivel === 'TIPO') {
-      coresTipo[i.codigo] =
-        i.corHex || '#171B68';
-    }
-  });
-
-  itens.forEach(function(i) {
-    if (i.nivel === 'SUBTIPO') {
-      coresSub[
-        i.codigoTipoPai + '|' + i.codigo
-      ] =
-        i.corHex ||
-        coresTipo[i.codigoTipoPai] ||
-        '#171B68';
+  rowsCat.forEach(function(r) {
+    const nivel = s2610R8Texto_(r.NIVEL).toUpperCase();
+    const codigo = s2610R8Texto_(r.CODIGO);
+    const corHex = s2610R8CorHex_(r.COR_HEX || '#171B68', false);
+    if (nivel === 'TIPO') {
+      coresTipo[codigo] = corHex;
+    } else if (nivel === 'SUBTIPO') {
+      const codigoPai = s2610R8Texto_(r.CODIGO_TIPO_PAI);
+      coresSub[codigoPai + '|' + codigo] = corHex;
     }
   });
 

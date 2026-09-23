@@ -1565,3 +1565,393 @@ check(
 
   return resultado;
 }
+
+/**
+ * S26.10: Saneamento Toponímico Multissetorial de Boxes e Galerias.
+ * 
+ * Reassocia os boxes localizados nas pontas de galerias que foram indevidamente
+ * vinculados às avenidas perimetrais transversais (AVALN, AVCRP, RJSA) de volta
+ * para os eixos verticais corretos em todos os setores (Azul, Amarelo, Roxo, etc.).
+ * Corrige também o corredor de Dom Manuel no Setor Roxo e preenche em lote
+ * os códigos canônicos LUC na aba LOJAS_MAPA.
+ * 
+ * @returns {{ ok: boolean, totalAnalisados: number, totalCorrigidos: number, detalhes: Array<Object> }}
+ */
+function sanearToponimiaLojasMapa() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const shMap = ss.getSheetByName('LOJAS_MAPA');
+  if (!shMap || shMap.getLastRow() < 2) {
+    throw new Error('Aba LOJAS_MAPA não encontrada ou vazia.');
+  }
+
+  const shCorr = ss.getSheetByName('CORREDORES');
+  const shPts = ss.getSheetByName('CORREDOR_PONTOS');
+
+  // Garante a existência dos corredores de Dom Manuel no Amarelo e Roxo
+  if (shCorr && shCorr.getLastRow() >= 1) {
+    const corrHeaders = shCorr.getRange(1, 1, 1, shCorr.getLastColumn()).getValues()[0].map(String);
+    const idxCorrId = corrHeaders.indexOf('ID_CORREDOR');
+    const existingCorrIds = new Set(shCorr.getRange(2, idxCorrId + 1, shCorr.getLastRow() - 1, 1).getValues().map(r => String(r[0] || '').trim()));
+    
+    if (!existingCorrIds.has('COR-AM-ADMMN')) {
+      shCorr.appendRow(['COR-AM-ADMMN', 'MAP-CFF-N2-AMARELO', 'Avenida Dom Manuel', 'ADMMN', 'AVENIDA', 1, 'PARTE_SUPERIOR_DO_MAPA', 'PARTE_INFERIOR_DO_MAPA', 0.025, 'MEDIA', 'VALIDADA', 'SIM', 'Adicionado pelo saneamento toponímico S26.10', 'SIM', new Date(), new Date(), 'SISTEMA', 'Antigravity']);
+    }
+    if (!existingCorrIds.has('COR-RX-ADMMN')) {
+      shCorr.appendRow(['COR-RX-ADMMN', 'MAP-CFF-N3-ROXO', 'Avenida Dom Manuel', 'ADMMN', 'AVENIDA', 1, 'PARTE_SUPERIOR_DO_MAPA', 'PARTE_INFERIOR_DO_MAPA', 0.025, 'MEDIA', 'VALIDADA', 'SIM', 'Adicionado pelo saneamento toponímico S26.10', 'SIM', new Date(), new Date(), 'SISTEMA', 'Antigravity']);
+    }
+  }
+
+  // Carrega polylines de CORREDOR_PONTOS
+  const ptsByCorr = {};
+  if (shPts && shPts.getLastRow() >= 2) {
+    const ptsVals = shPts.getDataRange().getValues();
+    const ptsHead = ptsVals.shift().map(String);
+    const idxCId = ptsHead.indexOf('ID_CORREDOR');
+    const idxOrd = ptsHead.indexOf('ORDEM');
+    const idxX = ptsHead.indexOf('X_NORMALIZADO') >= 0 ? ptsHead.indexOf('X_NORMALIZADO') : ptsHead.indexOf('X');
+    const idxY = ptsHead.indexOf('Y_NORMALIZADO') >= 0 ? ptsHead.indexOf('Y_NORMALIZADO') : ptsHead.indexOf('Y');
+    
+    ptsVals.forEach(r => {
+      const cId = String(r[idxCId] || '').trim();
+      const x = parseFloat(String(r[idxX] || '').replace(',', '.'));
+      const y = parseFloat(String(r[idxY] || '').replace(',', '.'));
+      const ord = Number(r[idxOrd]) || 0;
+      if (!ptsByCorr[cId]) ptsByCorr[cId] = [];
+      if (Number.isFinite(x) && Number.isFinite(y)) ptsByCorr[cId].push({ x, y, ord });
+    });
+    for (const k in ptsByCorr) ptsByCorr[k].sort((a, b) => a.ord - b.ord);
+  }
+
+  // Carrega corredores
+  const corrList = [];
+  if (shCorr && shCorr.getLastRow() >= 2) {
+    const cVals = shCorr.getDataRange().getValues();
+    const cHead = cVals.shift().map(String);
+    const idxId = cHead.indexOf('ID_CORREDOR');
+    const idxMapa = cHead.indexOf('ID_MAPA_SETOR');
+    const idxNome = cHead.indexOf('NOME');
+    const idxAtivo = cHead.indexOf('ATIVO');
+    cVals.forEach(r => {
+      const ativo = idxAtivo >= 0 ? String(r[idxAtivo] || 'SIM').toUpperCase() : 'SIM';
+      if (ativo !== 'NAO') {
+        corrList.push({
+          idCorredor: String(r[idxId] || '').trim(),
+          idMapa: String(r[idxMapa] || '').trim(),
+          nome: String(r[idxNome] || '').trim()
+        });
+      }
+    });
+  }
+
+  // Carrega Base Mestre de Lojistas
+  const ctxLoj = (typeof obterContextoPlanilhaLojistasMestre_ === 'function') ? obterContextoPlanilhaLojistasMestre_() : null;
+  const realLojSet = new Set();
+  const lojByNumAndSetor = new Map();
+
+  if (ctxLoj && ctxLoj.sh && ctxLoj.sh.getLastRow() >= 2) {
+    const lojVals = ctxLoj.sh.getDataRange().getValues();
+    const lojHead = lojVals.shift().map(h => String(h || '').trim().toUpperCase());
+    const idxLuc = lojHead.indexOf('LUC');
+    const idxSetor = lojHead.indexOf('SETOR');
+    const idxRua = lojHead.indexOf('RUA');
+    const idxTit = lojHead.indexOf('LOJISTA') >= 0 ? lojHead.indexOf('LOJISTA') : lojHead.indexOf('NOME_FANTASIA');
+
+    lojVals.forEach(r => {
+      const luc = String(r[idxLuc] || '').trim().toUpperCase();
+      const setor = String(r[idxSetor] || '').trim().toUpperCase();
+      const rua = String(r[idxRua] || '').trim();
+      const tit = String(r[idxTit] || '').trim();
+      if (luc) {
+        realLojSet.add(luc);
+        const m = luc.match(/(\d+)$/);
+        if (m) {
+          const num = m[1];
+          const key = setor + '::' + num;
+          if (!lojByNumAndSetor.has(key)) lojByNumAndSetor.set(key, []);
+          lojByNumAndSetor.get(key).push({ luc, rua, titular: tit });
+        }
+      }
+    });
+  }
+
+  // Lê LOJAS_MAPA
+  const mapRange = shMap.getDataRange();
+  const mapVals = mapRange.getValues();
+  const mapHead = mapVals[0].map(h => String(h || '').trim().toUpperCase());
+  
+  const idxId = mapHead.indexOf('ID_ESPACO') >= 0 ? mapHead.indexOf('ID_ESPACO') : 0;
+  const idxMapa = mapHead.indexOf('ID_MAPA_SETOR');
+  const idxNum = mapHead.indexOf('NUMERO_LOJA') >= 0 ? mapHead.indexOf('NUMERO_LOJA') : 3;
+  const idxLuc = mapHead.indexOf('LUC') >= 0 ? mapHead.indexOf('LUC') : 5;
+  const idxCorr = mapHead.indexOf('ID_CORREDOR') >= 0 ? mapHead.indexOf('ID_CORREDOR') : 7;
+  const idxX = mapHead.indexOf('X_NORMALIZADO') >= 0 ? mapHead.indexOf('X_NORMALIZADO') : 10;
+  const idxY = mapHead.indexOf('Y_NORMALIZADO') >= 0 ? mapHead.indexOf('Y_NORMALIZADO') : 11;
+  const idxChave = mapHead.indexOf('CHAVE_ENDERECO') >= 0 ? mapHead.indexOf('CHAVE_ENDERECO') : 24;
+
+  let totalCorrigidos = 0;
+  const corrigidos = [];
+
+  for (let i = 1; i < mapVals.length; i++) {
+    const r = mapVals[i];
+    const id = String(r[idxId] || '').trim();
+    const mapa = String(r[idxMapa] || '').trim();
+    const num = String(r[idxNum] || '').trim();
+    const lucAtual = String(r[idxLuc] || '').trim().toUpperCase();
+    const corrAtual = String(r[idxCorr] || '').trim();
+    const x = parseFloat(String(r[idxX] || '').replace(',', '.'));
+    const y = parseFloat(String(r[idxY] || '').replace(',', '.'));
+
+    const setorNome = mapa.includes('AZUL') ? 'SETOR AZUL' : (mapa.includes('AMARELO') ? 'SETOR AMARELO' : (mapa.includes('ROXO') ? 'SETOR ROXO' : (mapa.includes('VERDE') ? 'SETOR VERDE' : 'SETOR BRANCO')));
+
+    const ehPerimetral = /AVALN|AVCRP|RJSA/i.test(corrAtual);
+    const siglaAtual = corrAtual.split('-')[2] || corrAtual;
+    const lucComposto = (siglaAtual && num) ? (siglaAtual + num).toUpperCase() : '';
+
+    let novoCorr = corrAtual;
+    let novoLuc = lucAtual;
+    let alterado = false;
+
+    // Cenário 1: Ponta de galeria em avenida perimetral que NÃO existe na Base Mestre
+    if (ehPerimetral && (!lucComposto || !realLojSet.has(lucComposto))) {
+      // Borda esquerda (Avenida Dom Manuel):
+      if (Number.isFinite(x) && x < 0.18 && (mapa.includes('AMARELO') || mapa.includes('ROXO'))) {
+        const idCorrNovo = mapa.includes('AMARELO') ? 'COR-AM-ADMMN' : 'COR-RX-ADMMN';
+        const lucNovo = 'ADMMN' + num;
+        if (realLojSet.has(lucNovo)) {
+          novoCorr = idCorrNovo;
+          novoLuc = lucNovo;
+          alterado = true;
+        }
+      }
+
+      if (!alterado && Number.isFinite(x) && Number.isFinite(y)) {
+        // Encontra o corredor vertical mais próximo
+        const corrs = corrList.filter(c => c.idMapa === mapa && !/AVALN|AVCRP|RJSA|A13DM|TVBTR|AVDMO|TVPR|AVMTB/i.test(c.idCorredor));
+        let bestCorr = null;
+        let minDist = Infinity;
+        corrs.forEach(c => {
+          const pts = ptsByCorr[c.idCorredor] || [];
+          if (pts.length >= 2 && typeof distPolylineS3_ === 'function') {
+            const d = distPolylineS3_(x, y, pts).dist;
+            if (d < minDist) {
+              minDist = d;
+              bestCorr = c;
+            }
+          }
+        });
+
+        if (bestCorr && minDist <= 0.055) {
+          const siglaNova = bestCorr.idCorredor.split('-')[2] || '';
+          const lucNovo = (siglaNova + num).toUpperCase();
+          if (realLojSet.has(lucNovo)) {
+            novoCorr = bestCorr.idCorredor;
+            novoLuc = lucNovo;
+            alterado = true;
+          }
+        }
+      }
+
+      // Se polyline direta não deu, tenta candidato único pelo número no setor
+      if (!alterado) {
+        const cands = lojByNumAndSetor.get(setorNome + '::' + num) || [];
+        if (cands.length === 1) {
+          const cand = cands[0];
+          const candSigla = cand.luc.replace(num, '');
+          const corrMatch = corrList.find(c => c.idMapa === mapa && c.idCorredor.endsWith(candSigla));
+          if (corrMatch) {
+            novoCorr = corrMatch.idCorredor;
+            novoLuc = cand.luc;
+            alterado = true;
+          }
+        }
+      }
+    } else if (mapa === 'MAP-CFF-N3-ROXO' && corrAtual === 'COR-RX-R2DMR' && Number.isFinite(x) && x < 0.18) {
+      // Cenário 2: Eixo de Dom Manuel no Setor Roxo erroneamente associado a 25 de Março
+      const lucNovo = 'ADMMN' + num;
+      if (realLojSet.has(lucNovo)) {
+        novoCorr = 'COR-RX-ADMMN';
+        novoLuc = lucNovo;
+        alterado = true;
+      }
+    } else if ((!lucAtual || lucAtual.startsWith('LUC-DEMO-')) && lucComposto && realLojSet.has(lucComposto)) {
+      // Cenário 3: Preenchimento do LUC canônico que estava vazio ou com demo
+      novoLuc = lucComposto;
+      alterado = true;
+    }
+
+    if (alterado) {
+      r[idxCorr] = novoCorr;
+      r[idxLuc] = novoLuc;
+      if (idxChave >= 0) {
+        const nomeCorrObj = corrList.find(c => c.idCorredor === novoCorr);
+        const nomeCorr = nomeCorrObj ? nomeCorrObj.nome : novoCorr;
+        r[idxChave] = [num, nomeCorr, mapa].filter(Boolean).join(' • ');
+      }
+      totalCorrigidos++;
+      corrigidos.push({
+        linha: i + 1,
+        id: id,
+        mapa: mapa,
+        box: num,
+        corrAntigo: corrAtual,
+        corrNovo: novoCorr,
+        lucAntigo: lucAtual,
+        lucNovo: novoLuc
+      });
+    }
+  }
+
+  // Escreve as alterações em lote
+  if (totalCorrigidos > 0) {
+    mapRange.setValues(mapVals);
+  }
+
+  console.log('[SANEAR] Concluído: ' + totalCorrigidos + ' boxes saneados de ' + (mapVals.length - 1) + ' analisados.');
+  return {
+    ok: true,
+    totalAnalisados: mapVals.length - 1,
+    totalCorrigidos: totalCorrigidos,
+    detalhes: corrigidos
+  };
+}
+
+/**
+ * Definição dos 16 boxes da Ilha Central do Setor Roxo (Nível 3).
+ * Na planta física impressa (CAD/PDF), o bloco foi desenhado com o texto 2241..2228,
+ * mas na Base Mestre (LOJISTAS) e no Nível 3 seus identificadores canônicos são 3241..3228.
+ */
+function obterDefinicaoBoxesIlhaCentralRoxo_() {
+  return [
+    // ILHA 1 - Entre Rua General Sampaio e Rua 24 de Maio
+    // Lado Esquerdo da Ilha (voltado para RGNSM)
+    { id: 'LMP-RX-RGNSM-3240-E-6699-4880', mapa: 'MAP-CFF-N3-ROXO', numero: '3240', nome: 'Box 3240', luc: 'RGNSM3240', tipo: 'BOX', corredor: 'COR-RX-RGNSM', segmento: 'SEG-RX-RGNSM-01', lado: 'ESQUERDO', x: 0.669878, y: 0.487956, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3240 (Piso 3, identificado como 2240 no desenho da planta)', chave: '3240 • Rua General Sampaio • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-RGNSM-3236-E-6699-5008', mapa: 'MAP-CFF-N3-ROXO', numero: '3236', nome: 'Box 3236', luc: 'RGNSM3236', tipo: 'BOX', corredor: 'COR-RX-RGNSM', segmento: 'SEG-RX-RGNSM-01', lado: 'ESQUERDO', x: 0.669878, y: 0.500825, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3236 (Piso 3, identificado como 2236 no desenho da planta)', chave: '3236 • Rua General Sampaio • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-RGNSM-3232-E-6699-5137', mapa: 'MAP-CFF-N3-ROXO', numero: '3232', nome: 'Box 3232', luc: 'RGNSM3232', tipo: 'BOX', corredor: 'COR-RX-RGNSM', segmento: 'SEG-RX-RGNSM-01', lado: 'ESQUERDO', x: 0.669878, y: 0.513659, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3232 (Piso 3, identificado como 2232 no desenho da planta)', chave: '3232 • Rua General Sampaio • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-RGNSM-3228-E-6699-5264', mapa: 'MAP-CFF-N3-ROXO', numero: '3228', nome: 'Box 3228', luc: 'RGNSM3228', tipo: 'BOX', corredor: 'COR-RX-RGNSM', segmento: 'SEG-RX-RGNSM-01', lado: 'ESQUERDO', x: 0.669878, y: 0.526427, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3228 (Piso 3, identificado como 2228 no desenho da planta)', chave: '3228 • Rua General Sampaio • MAP-CFF-N3-ROXO' },
+    // Lado Direito da Ilha (voltado para R24DM)
+    { id: 'LMP-RX-R24DM-3241-D-6793-4878', mapa: 'MAP-CFF-N3-ROXO', numero: '3241', nome: 'Box 3241', luc: 'R24DM3241', tipo: 'BOX', corredor: 'COR-RX-R24DM', segmento: 'SEG-RX-R24DM-01', lado: 'DIREITO', x: 0.679287, y: 0.487800, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3241 (Piso 3, identificado como 2241 no desenho da planta)', chave: '3241 • Rua 24 de Maio • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-R24DM-3237-D-6793-5007', mapa: 'MAP-CFF-N3-ROXO', numero: '3237', nome: 'Box 3237', luc: 'R24DM3237', tipo: 'BOX', corredor: 'COR-RX-R24DM', segmento: 'SEG-RX-R24DM-01', lado: 'DIREITO', x: 0.679287, y: 0.500655, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3237 (Piso 3, identificado como 2237 no desenho da planta)', chave: '3237 • Rua 24 de Maio • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-R24DM-3233-D-6793-5135', mapa: 'MAP-CFF-N3-ROXO', numero: '3233', nome: 'Box 3233', luc: 'R24DM3233', tipo: 'BOX', corredor: 'COR-RX-R24DM', segmento: 'SEG-RX-R24DM-01', lado: 'DIREITO', x: 0.679287, y: 0.513504, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3233 (Piso 3, identificado como 2233 no desenho da planta)', chave: '3233 • Rua 24 de Maio • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-R24DM-3229-D-6793-5263', mapa: 'MAP-CFF-N3-ROXO', numero: '3229', nome: 'Box 3229', luc: 'R24DM3229', tipo: 'BOX', corredor: 'COR-RX-R24DM', segmento: 'SEG-RX-R24DM-01', lado: 'DIREITO', x: 0.679287, y: 0.526258, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3229 (Piso 3, identificado como 2229 no desenho da planta)', chave: '3229 • Rua 24 de Maio • MAP-CFF-N3-ROXO' },
+
+    // ILHA 2 - Entre Rua Senador Pompeu e Rua General Sampaio
+    // Lado Esquerdo da Ilha (voltado para RSNPM)
+    { id: 'LMP-RX-RSNPM-3240-E-6244-4880', mapa: 'MAP-CFF-N3-ROXO', numero: '3240', nome: 'Box 3240', luc: 'RSNPM3240', tipo: 'BOX', corredor: 'COR-RX-RSNPM', segmento: 'SEG-RX-RSNPM-01', lado: 'ESQUERDO', x: 0.624410, y: 0.487956, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3240 (Piso 3, identificado como 2240 no desenho da planta)', chave: '3240 • Rua Senador Pompeu • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-RSNPM-3236-E-6244-5008', mapa: 'MAP-CFF-N3-ROXO', numero: '3236', nome: 'Box 3236', luc: 'RSNPM3236', tipo: 'BOX', corredor: 'COR-RX-RSNPM', segmento: 'SEG-RX-RSNPM-01', lado: 'ESQUERDO', x: 0.624410, y: 0.500825, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3236 (Piso 3, identificado como 2236 no desenho da planta)', chave: '3236 • Rua Senador Pompeu • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-RSNPM-3232-E-6244-5137', mapa: 'MAP-CFF-N3-ROXO', numero: '3232', nome: 'Box 3232', luc: 'RSNPM3232', tipo: 'BOX', corredor: 'COR-RX-RSNPM', segmento: 'SEG-RX-RSNPM-01', lado: 'ESQUERDO', x: 0.624410, y: 0.513659, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3232 (Piso 3, identificado como 2232 no desenho da planta)', chave: '3232 • Rua Senador Pompeu • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-RSNPM-3228-E-6244-5264', mapa: 'MAP-CFF-N3-ROXO', numero: '3228', nome: 'Box 3228', luc: 'RSNPM3228', tipo: 'BOX', corredor: 'COR-RX-RSNPM', segmento: 'SEG-RX-RSNPM-01', lado: 'ESQUERDO', x: 0.624410, y: 0.526427, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3228 (Piso 3, identificado como 2228 no desenho da planta)', chave: '3228 • Rua Senador Pompeu • MAP-CFF-N3-ROXO' },
+    // Lado Direito da Ilha (voltado para RGNSM)
+    { id: 'LMP-RX-RGNSM-3241-D-6340-4878', mapa: 'MAP-CFF-N3-ROXO', numero: '3241', nome: 'Box 3241', luc: 'RGNSM3241', tipo: 'BOX', corredor: 'COR-RX-RGNSM', segmento: 'SEG-RX-RGNSM-01', lado: 'DIREITO', x: 0.633960, y: 0.487800, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3241 (Piso 3, identificado como 2241 no desenho da planta)', chave: '3241 • Rua General Sampaio • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-RGNSM-3237-D-6340-5007', mapa: 'MAP-CFF-N3-ROXO', numero: '3237', nome: 'Box 3237', luc: 'RGNSM3237', tipo: 'BOX', corredor: 'COR-RX-RGNSM', segmento: 'SEG-RX-RGNSM-01', lado: 'DIREITO', x: 0.633960, y: 0.500655, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3237 (Piso 3, identificado como 2237 no desenho da planta)', chave: '3237 • Rua General Sampaio • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-RGNSM-3233-D-6340-5135', mapa: 'MAP-CFF-N3-ROXO', numero: '3233', nome: 'Box 3233', luc: 'RGNSM3233', tipo: 'BOX', corredor: 'COR-RX-RGNSM', segmento: 'SEG-RX-RGNSM-01', lado: 'DIREITO', x: 0.633960, y: 0.513504, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3233 (Piso 3, identificado como 2233 no desenho da planta)', chave: '3233 • Rua General Sampaio • MAP-CFF-N3-ROXO' },
+    { id: 'LMP-RX-RGNSM-3229-D-6340-5263', mapa: 'MAP-CFF-N3-ROXO', numero: '3229', nome: 'Box 3229', luc: 'RGNSM3229', tipo: 'BOX', corredor: 'COR-RX-RGNSM', segmento: 'SEG-RX-RGNSM-01', lado: 'DIREITO', x: 0.633960, y: 0.526258, largura: 0.022, altura: 0.016, rotacao: 90, raio: 0.025, cor: '#7E22CE', obs: 'Box 3229 (Piso 3, identificado como 2229 no desenho da planta)', chave: '3229 • Rua General Sampaio • MAP-CFF-N3-ROXO' }
+  ];
+}
+
+/**
+ * Garante a persistência dos 16 boxes da Ilha Central do Setor Roxo na aba LOJAS_MAPA.
+ * Idempotente: só insere se o ID não existir na aba.
+ */
+function inserirBoxesIlhaCentralSetorRoxo() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName('LOJAS_MAPA');
+  if (!sh) throw new Error('Aba LOJAS_MAPA não encontrada.');
+
+  const defs = obterDefinicaoBoxesIlhaCentralRoxo_();
+  const lastRow = sh.getLastRow();
+  const lastCol = sh.getLastColumn();
+  if (lastRow < 1) return { ok: true, inseridos: 0 };
+
+  const idsExistentes = new Set();
+  if (lastRow >= 2) {
+    const idsRange = sh.getRange(2, 1, lastRow - 1, 1).getValues();
+    idsRange.forEach(r => {
+      const id = String(r[0] || '').trim();
+      if (id) idsExistentes.add(id);
+    });
+  }
+
+  const faltantes = defs.filter(d => !idsExistentes.has(d.id));
+  if (!faltantes.length) {
+    return { ok: true, inseridos: 0, mensagem: 'Todos os 16 boxes já constam em LOJAS_MAPA.' };
+  }
+
+  const rawHeaders = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  const cabecalhos = rawHeaders.map(h => String(h || '').trim().toUpperCase());
+
+  const idxId = cabecalhos.indexOf('ID_LOJA_MAPA');
+  const idxIdLoja = cabecalhos.indexOf('ID_LOJA');
+  const idxMapa = cabecalhos.indexOf('ID_MAPA_SETOR');
+  const idxNum = cabecalhos.indexOf('NUMERO_LOJA');
+  const idxNome = cabecalhos.indexOf('NOME_LOJA');
+  const idxLuc = cabecalhos.indexOf('LUC');
+  const idxTipo = cabecalhos.indexOf('TIPO_UNIDADE');
+  const idxCorr = cabecalhos.indexOf('ID_CORREDOR');
+  const idxSeg = cabecalhos.indexOf('ID_SEGMENTO');
+  const idxLado = cabecalhos.indexOf('LADO_CORREDOR');
+  const idxX = cabecalhos.indexOf('X_NORMALIZADO');
+  const idxY = cabecalhos.indexOf('Y_NORMALIZADO');
+  const idxLarg = cabecalhos.indexOf('LARGURA_NORMALIZADA');
+  const idxAlt = cabecalhos.indexOf('ALTURA_NORMALIZADA');
+  const idxRot = cabecalhos.indexOf('ROTACAO_GRAUS');
+  const idxRaio = cabecalhos.indexOf('RAIO_PROXIMIDADE');
+  const idxCor = cabecalhos.indexOf('COR_MARCADOR');
+  const idxExibir = cabecalhos.indexOf('EXIBIR_ROTULO');
+  const idxStatus = cabecalhos.indexOf('STATUS');
+  const idxConf = cabecalhos.indexOf('CONFIRMADO');
+  const idxAtivo = cabecalhos.indexOf('ATIVO');
+  const idxCriado = cabecalhos.indexOf('CRIADO_EM');
+  const idxAtualizado = cabecalhos.indexOf('ATUALIZADO_EM');
+  const idxObs = cabecalhos.indexOf('OBSERVACAO');
+  const idxChave = cabecalhos.indexOf('CHAVE_ENDERECO');
+  const idxOrigem = cabecalhos.indexOf('ORIGEM_COORDENADAS');
+  const idxStatusRev = cabecalhos.indexOf('STATUS_REVISAO');
+  const idxMotivoRev = cabecalhos.indexOf('MOTIVO_REVISAO');
+  const idxRevPor = cabecalhos.indexOf('REVISADO_POR');
+  const idxRevEm = cabecalhos.indexOf('REVISADO_EM');
+
+  const agora = new Date();
+  const novasLinhas = faltantes.map(d => {
+    const row = new Array(lastCol).fill('');
+    if (idxId >= 0) row[idxId] = d.id;
+    if (idxIdLoja >= 0) row[idxIdLoja] = '';
+    if (idxMapa >= 0) row[idxMapa] = d.mapa;
+    if (idxNum >= 0) row[idxNum] = d.numero;
+    if (idxNome >= 0) row[idxNome] = d.nome;
+    if (idxLuc >= 0) row[idxLuc] = d.luc;
+    if (idxTipo >= 0) row[idxTipo] = d.tipo;
+    if (idxCorr >= 0) row[idxCorr] = d.corredor;
+    if (idxSeg >= 0) row[idxSeg] = d.segmento;
+    if (idxLado >= 0) row[idxLado] = d.lado;
+    if (idxX >= 0) row[idxX] = d.x;
+    if (idxY >= 0) row[idxY] = d.y;
+    if (idxLarg >= 0) row[idxLarg] = d.largura;
+    if (idxAlt >= 0) row[idxAlt] = d.altura;
+    if (idxRot >= 0) row[idxRot] = d.rotacao;
+    if (idxRaio >= 0) row[idxRaio] = d.raio;
+    if (idxCor >= 0) row[idxCor] = d.cor;
+    if (idxExibir >= 0) row[idxExibir] = 'SIM';
+    if (idxStatus >= 0) row[idxStatus] = 'POSICIONADA';
+    if (idxConf >= 0) row[idxConf] = 'SIM';
+    if (idxAtivo >= 0) row[idxAtivo] = 'SIM';
+    if (idxCriado >= 0) row[idxCriado] = agora;
+    if (idxAtualizado >= 0) row[idxAtualizado] = agora;
+    if (idxObs >= 0) row[idxObs] = d.obs;
+    if (idxChave >= 0) row[idxChave] = d.chave;
+    if (idxOrigem >= 0) row[idxOrigem] = 'ILHA_CENTRAL_S2610_CEOP';
+    if (idxStatusRev >= 0) row[idxStatusRev] = 'VALIDADA';
+    if (idxMotivoRev >= 0) row[idxMotivoRev] = 'ILHA_CENTRAL_S2610';
+    if (idxRevPor >= 0) row[idxRevPor] = 'SISTEMA';
+    if (idxRevEm >= 0) row[idxRevEm] = agora;
+    return row;
+  });
+
+  sh.getRange(lastRow + 1, 1, novasLinhas.length, lastCol).setValues(novasLinhas);
+  console.log('[ILHA_CENTRAL_ROXO] Inseridos ' + novasLinhas.length + ' boxes na aba LOJAS_MAPA.');
+
+  return {
+    ok: true,
+    inseridos: novasLinhas.length,
+    mensagem: 'Foram inseridos ' + novasLinhas.length + ' boxes da Ilha Central na aba LOJAS_MAPA com sucesso.'
+  };
+}

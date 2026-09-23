@@ -2834,8 +2834,24 @@ function cancelarRelacionadosExclusaoS236_(ss,nomeAba,idRegistro,protocolo,statu
 // ========================================================
 // S23.7 — EDIÇÃO CADASTRAL DA SINALIZAÇÃO
 // ========================================================
+function exigirPermissaoEdicaoS237_(){
+  const s=sessaoAtualS14_();
+  if(!s.autenticado){
+    throw new Error(
+      s.identidadeDisponivel
+        ? 'Usuário não autorizado ou inativo.'
+        : 'Não foi possível identificar sua conta Google. Verifique a configuração de acesso do Web App.'
+    );
+  }
+  const perfil = String(s.perfil||'').toUpperCase();
+  if(s.permissoes?.administrar===true || s.permissoes?.editarRegistro===true || ['ADMIN','GESTOR','OPERADOR'].includes(perfil)){
+    return s;
+  }
+  throw new Error(`Seu perfil (${s.perfil}) não possui permissão para editar registros.`);
+}
+
 function appObterRegistroParaEdicaoS237(idOuProtocolo){
-  exigirPermissaoS14_('administrar');
+  exigirPermissaoEdicaoS237_();
 
   const chave=String(idOuProtocolo||'').trim();
   if(!chave)throw new Error('Registro não informado.');
@@ -2869,7 +2885,7 @@ function serializarRegistroEdicaoS2371_(reg){
 
     if(v instanceof Date){
       // Datas sem horário usadas pelo formulário recebem yyyy-MM-dd.
-      if(['DATA_INSTALACAO','VALIDADE'].includes(k)){
+      if(['DATA_INSTALACAO','VALIDADE','DATA_INICIO_SERVICO','DATA_FIM_SERVICO'].includes(k)){
         out[k]=Utilities.formatDate(v,APP.TIMEZONE,'yyyy-MM-dd');
       }else{
         out[k]=Utilities.formatDate(v,APP.TIMEZONE,"yyyy-MM-dd'T'HH:mm:ss");
@@ -2898,7 +2914,7 @@ function serializarRegistroEdicaoS2371_(reg){
 }
 
 function appAtualizarRegistroS237(payload){
-  exigirPermissaoS14_('administrar');
+  exigirPermissaoEdicaoS237_();
   payload=payload||{};
 
   const id=String(payload.idRegistro||'').trim();
@@ -2945,14 +2961,41 @@ function appAtualizarRegistroS237(payload){
     DUPLA_FACE:atual.DUPLA_FACE,
     POSSUI_QR_CODE:atual.POSSUI_QR_CODE,
     POSSUI_BRAILLE:atual.POSSUI_BRAILLE,
-    POSSUI_PICTOGRAMA:atual.POSSUI_PICTOGRAMA
+    POSSUI_PICTOGRAMA:atual.POSSUI_PICTOGRAMA,
+    CODIGO_PATRIMONIO:atual.CODIGO_PATRIMONIO || '',
+    SOLICITANTE_NOME:atual.SOLICITANTE_NOME || '',
+    SOLICITANTE_CPF:atual.SOLICITANTE_CPF || '',
+    SOLICITANTE_CONTATO:atual.SOLICITANTE_CONTATO || '',
+    SOLICITANTE_EMAIL:atual.SOLICITANTE_EMAIL || '',
+    TIPO_SOLICITACAO:atual.TIPO_SOLICITACAO || '',
+    EMPRESA_INTERNET:atual.EMPRESA_INTERNET || '',
+    DATA_INICIO_SERVICO:atual.DATA_INICIO_SERVICO || '',
+    DATA_FIM_SERVICO:atual.DATA_FIM_SERVICO || '',
+    HORARIO_SERVICO:atual.HORARIO_SERVICO || '',
+    HORARIO_SEGUNDA:atual.HORARIO_SEGUNDA || '',
+    PRESTADOR_NOME:atual.PRESTADOR_NOME || '',
+    PRESTADOR_CPF:atual.PRESTADOR_CPF || '',
+    PRESTADOR_CONTATO:atual.PRESTADOR_CONTATO || '',
+    PRESTADOR_EMAIL:atual.PRESTADOR_EMAIL || '',
+    PRESTADOR_EMPRESA:atual.PRESTADOR_EMPRESA || '',
+    EQUIPE_AJUDANTES:atual.EQUIPE_AJUDANTES || '',
+    ITENS_RETIRADA:atual.ITENS_RETIRADA || '',
+    SERVICO_ESTRUTURA:atual.SERVICO_ESTRUTURA || '',
+    SERVICO_REVESTIMENTO:atual.SERVICO_REVESTIMENTO || '',
+    SERVICO_INSTALACOES:atual.SERVICO_INSTALACOES || ''
   };
+
+  const codPatrimonio = String(payload.codigoPatrimonio || '').trim();
+  let txtSinalizacao = String(payload.textoSinalizacao || '').trim();
+  if (codPatrimonio && !txtSinalizacao.includes('[TAG: ' + codPatrimonio + ']')) {
+    txtSinalizacao = ('[TAG: ' + codPatrimonio + '] ' + txtSinalizacao).trim();
+  }
 
   const novo={
     TIPO:String(payload.tipo||'').trim(),
     FINALIDADE:String(payload.finalidade||'').trim(),
     TITULO:String(payload.titulo||'').trim(),
-    TEXTO_SINALIZACAO:String(payload.textoSinalizacao||'').trim(),
+    TEXTO_SINALIZACAO:txtSinalizacao,
     DESCRICAO:String(payload.descricao||'').trim(),
     MATERIAL:String(payload.material||'').trim(),
     DIMENSOES:String(payload.dimensoes||'').trim(),
@@ -2967,8 +3010,30 @@ function appAtualizarRegistroS237(payload){
     DUPLA_FACE:Boolean(payload.duplaFace),
     POSSUI_QR_CODE:Boolean(payload.possuiQrCode),
     POSSUI_BRAILLE:Boolean(payload.possuiBraille),
-    POSSUI_PICTOGRAMA:Boolean(payload.possuiPictograma)
+    POSSUI_PICTOGRAMA:Boolean(payload.possuiPictograma),
+    CODIGO_PATRIMONIO:codPatrimonio
   };
+
+  if (payload.asNomeTitular !== undefined) novo.SOLICITANTE_NOME = String(payload.asNomeTitular || '').trim();
+  if (payload.asCpfTitular !== undefined) novo.SOLICITANTE_CPF = String(payload.asCpfTitular || '').trim();
+  if (payload.asContatoTitular !== undefined) novo.SOLICITANTE_CONTATO = String(payload.asContatoTitular || '').trim();
+  if (payload.asEmailSolicitante !== undefined) novo.SOLICITANTE_EMAIL = String(payload.asEmailSolicitante || '').trim();
+  if (payload.asTipoSolicitacao !== undefined) novo.TIPO_SOLICITACAO = String(payload.asTipoSolicitacao || '').trim();
+  if (payload.asEmpresaInternet !== undefined) novo.EMPRESA_INTERNET = String(payload.asEmpresaInternet || '').trim();
+  if (payload.asDataInicio !== undefined) novo.DATA_INICIO_SERVICO = String(payload.asDataInicio || '').trim();
+  if (payload.asDataFim !== undefined) novo.DATA_FIM_SERVICO = String(payload.asDataFim || '').trim();
+  if (payload.asHorarioServico !== undefined) novo.HORARIO_SERVICO = String(payload.asHorarioServico || '').trim();
+  if (payload.asHorarioSegunda !== undefined) novo.HORARIO_SEGUNDA = String(payload.asHorarioSegunda || '').trim();
+  if (payload.asNomePrestador !== undefined) novo.PRESTADOR_NOME = String(payload.asNomePrestador || '').trim();
+  if (payload.asCpfPrestador !== undefined) novo.PRESTADOR_CPF = String(payload.asCpfPrestador || '').trim();
+  if (payload.asContatoPrestador !== undefined) novo.PRESTADOR_CONTATO = String(payload.asContatoPrestador || '').trim();
+  if (payload.asEmailPrestador !== undefined) novo.PRESTADOR_EMAIL = String(payload.asEmailPrestador || '').trim();
+  if (payload.asEmpresaPrestador !== undefined) novo.PRESTADOR_EMPRESA = String(payload.asEmpresaPrestador || '').trim();
+  if (payload.asEquipe !== undefined) novo.EQUIPE_AJUDANTES = String(payload.asEquipe || '').trim();
+  if (payload.asItensRetirada !== undefined) novo.ITENS_RETIRADA = String(payload.asItensRetirada || '').trim();
+  if (payload.asServicoEstrutura !== undefined) novo.SERVICO_ESTRUTURA = String(payload.asServicoEstrutura || '').trim();
+  if (payload.asServicoRevestimento !== undefined) novo.SERVICO_REVESTIMENTO = String(payload.asServicoRevestimento || '').trim();
+  if (payload.asServicoInstalacoes !== undefined) novo.SERVICO_INSTALACOES = String(payload.asServicoInstalacoes || '').trim();
 
   if(!novo.TIPO)throw new Error('Tipo é obrigatório.');
   if(!novo.TITULO)throw new Error('Título é obrigatório.');
@@ -3093,3 +3158,1013 @@ function registrarHistoricoEdicaoS237_(ss,registro,alterados,payload){
 
   appendObjetoPorCabecalhoS7_(sh,row);
 }
+
+/**
+ * Conclui ou reabre uma Autorização de Serviço (AS) e atualiza REGISTROS e REGISTRO_HISTORICO.
+ * Ao concluir, o ícone da AS é removido do mapa dos corredores.
+ */
+function appAlternarStatusConclusaoAS(payload) {
+  exigirPermissaoEdicaoS237_();
+  payload = payload || {};
+
+  const id = String(payload.idRegistro || '').trim();
+  const proto = String(payload.protocolo || '').trim();
+  const acao = String(payload.acao || 'CONCLUIR').toUpperCase().trim();
+
+  if (!id && !proto) throw new Error('ID_REGISTRO ou PROTOCOLO obrigatório.');
+
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName('REGISTROS');
+  if (!sh) throw new Error('Aba REGISTROS ausente.');
+
+  const vals = sh.getDataRange().getValues();
+  if (vals.length < 2) throw new Error('REGISTROS sem dados.');
+
+  const h = vals[0].map(v => String(v || '').trim());
+  const idx = {}; h.forEach((k, i) => idx[k] = i);
+
+  const rowIndex = vals.findIndex((r, i) => {
+    if (i === 0) return false;
+    const rId = String(r[idx.ID_REGISTRO] || '').trim();
+    const rProto = String(r[idx.PROTOCOLO] || '').trim();
+    return (id && rId === id) || (proto && rProto === proto);
+  });
+
+  if (rowIndex < 1) throw new Error('Autorização de Serviço não encontrada.');
+
+  const atual = {};
+  h.forEach((k, i) => atual[k] = vals[rowIndex][i]);
+
+  const statusAnterior = String(atual.STATUS || '').trim();
+  const novoStatus = (acao === 'REABRIR') ? 'AUTORIZADO' : 'CONCLUIDO';
+
+  if (idx.STATUS >= 0) {
+    sh.getRange(rowIndex + 1, idx.STATUS + 1).setValue(novoStatus);
+  }
+
+  const agora = new Date();
+  const usuario = (usuarioRpcAtualS223_()?.email || Session.getActiveUser().getEmail()) || 'WEB_APP';
+
+  if (idx.ATUALIZADO_EM >= 0) sh.getRange(rowIndex + 1, idx.ATUALIZADO_EM + 1).setValue(agora);
+  if (idx.SINCRONIZADO_EM >= 0) sh.getRange(rowIndex + 1, idx.SINCRONIZADO_EM + 1).setValue(agora);
+  if (idx.ATUALIZADO_POR >= 0) sh.getRange(rowIndex + 1, idx.ATUALIZADO_POR + 1).setValue(usuario);
+
+  if (acao === 'CONCLUIR') {
+    if (idx.CONCLUIDO_EM >= 0) sh.getRange(rowIndex + 1, idx.CONCLUIDO_EM + 1).setValue(agora);
+    if (idx.CONCLUIDO_POR >= 0) sh.getRange(rowIndex + 1, idx.CONCLUIDO_POR + 1).setValue(usuario);
+  } else if (acao === 'REABRIR') {
+    if (idx.CONCLUIDO_EM >= 0) sh.getRange(rowIndex + 1, idx.CONCLUIDO_EM + 1).setValue('');
+    if (idx.CONCLUIDO_POR >= 0) sh.getRange(rowIndex + 1, idx.CONCLUIDO_POR + 1).setValue('');
+  }
+
+  // Registrar em REGISTRO_HISTORICO
+  const shHist = ss.getSheetByName('REGISTRO_HISTORICO');
+  if (shHist) {
+    const rowHist = {
+      ID_HISTORICO: 'HIST-' + Utilities.getUuid().replace(/-/g, '').slice(0, 16).toUpperCase(),
+      ID_REGISTRO: String(atual.ID_REGISTRO || id),
+      PROTOCOLO: String(atual.PROTOCOLO || proto),
+      DATA_HORA: agora,
+      TIPO_EVENTO: (acao === 'REABRIR') ? 'REABERTURA_AS' : 'CONCLUSAO_AS',
+      STATUS_ANTERIOR: statusAnterior,
+      STATUS_NOVO: novoStatus,
+      VALOR_ANTERIOR: JSON.stringify({ STATUS: statusAnterior }),
+      VALOR_NOVO: JSON.stringify({ STATUS: novoStatus }),
+      ESTADO_CONSERVACAO: String(atual.ESTADO_CONSERVACAO || ''),
+      CONDICAO: String(atual.CONDICAO || ''),
+      RESPONSAVEL_INSPECAO: usuario,
+      OBSERVACAO: (acao === 'REABRIR') ? 'Autorização de Serviço reaberta.' : 'Autorização de Serviço concluída/encerrada.',
+      ORIGEM: 'WEB_APP',
+      DEVICE_ID: String(payload.deviceId || ''),
+      VERSAO_APP: APP.VERSAO
+    };
+    appendObjetoPorCabecalhoS7_(shHist, rowHist);
+  }
+
+  registrarAuditoriaS15_({
+    acao: (acao === 'REABRIR') ? 'AS_REABERTA' : 'AS_CONCLUIDA',
+    entidade: 'REGISTROS',
+    entidadeId: String(atual.ID_REGISTRO || id),
+    resultado: 'SUCESSO',
+    origem: 'WEB_APP',
+    deviceId: String(payload.deviceId || ''),
+    detalhes: {
+      protocolo: String(atual.PROTOCOLO || proto),
+      statusAnterior: statusAnterior,
+      novoStatus: novoStatus,
+      acao: acao
+    }
+  });
+
+  SpreadsheetApp.flush();
+
+  return {
+    ok: true,
+    idRegistro: String(atual.ID_REGISTRO || id),
+    protocolo: String(atual.PROTOCOLO || proto),
+    novoStatus: novoStatus,
+    acao: acao
+  };
+}
+
+/**
+ * Retorna todas as Autorizações de Serviço cadastradas na base (ruas, corredores e lojas)
+ * com contadores de KPI consolidados e ordenação cronológica.
+ */
+function appListarTodasAutorizacoesServico(filtros) {
+  exigirPermissaoLeituraLojistaS14_();
+  filtros = filtros || {};
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName('REGISTROS');
+  if (!sh || sh.getLastRow() < 2) {
+    return {
+      ok: true,
+      total: 0,
+      kpis: { total: 0, abertas: 0, pendentes: 0, concluidas: 0 },
+      itens: []
+    };
+  }
+
+  const values = sh.getDataRange().getValues();
+  const head = values.shift().map(String);
+  const idx = {};
+  head.forEach((h, i) => idx[h] = i);
+
+  const itens = [];
+  let countAbertas = 0;
+  let countConcluidas = 0;
+  let countPendentes = 0;
+
+  for (let i = 0; i < values.length; i++) {
+    const r = values[i];
+    const status = String(r[idx.STATUS] || '').trim().toUpperCase();
+    if (['EXCLUIDO', 'DELETADO'].includes(status)) continue;
+
+    const catReg = String(r[idx.CATEGORIA_REGISTRO] || '').toUpperCase();
+    const tipo = String(r[idx.TIPO] || '');
+    const finalidade = String(r[idx.FINALIDADE] || '');
+
+    const ehAS = catReg === 'AUTORIZACAO_SERVICO' ||
+                 tipo.startsWith('AS — ') ||
+                 finalidade === 'Autorização de Serviço';
+
+    if (!ehAS) continue;
+
+    const criadoEm = r[idx.CRIADO_EM];
+    let dataCriadoFormatada = '';
+    if (criadoEm instanceof Date && !isNaN(criadoEm)) {
+      dataCriadoFormatada = Utilities.formatDate(criadoEm, APP.TIMEZONE || 'America/Fortaleza', "dd/MM/yyyy HH:mm");
+    } else {
+      dataCriadoFormatada = String(criadoEm || '');
+    }
+
+    const concluidoEm = idx.CONCLUIDO_EM >= 0 ? r[idx.CONCLUIDO_EM] : null;
+    let dataConcluidoFormatada = '';
+    if (concluidoEm instanceof Date && !isNaN(concluidoEm)) {
+      dataConcluidoFormatada = Utilities.formatDate(concluidoEm, APP.TIMEZONE || 'America/Fortaleza', "dd/MM/yyyy HH:mm");
+    } else if (concluidoEm) {
+      dataConcluidoFormatada = String(concluidoEm || '');
+    }
+
+    const stNormalizado = status || 'AUTORIZADO';
+    if (['CONCLUIDO', 'CONCLUIDA', 'FINALIZADO', 'FINALIZADA'].includes(stNormalizado)) {
+      countConcluidas++;
+    } else if (['PENDENTE', 'EM_ANDAMENTO', 'EM ANDAMENTO'].includes(stNormalizado)) {
+      countPendentes++;
+    } else {
+      countAbertas++;
+    }
+
+    itens.push({
+      idRegistro: String(r[idx.ID_REGISTRO] || ''),
+      protocolo: String(r[idx.PROTOCOLO] || ''),
+      categoria: 'AUTORIZACAO_SERVICO',
+      tipo: tipo || 'Autorização de Serviço',
+      finalidade: finalidade || 'Autorização de Serviço',
+      titulo: String(r[idx.TITULO] || ''),
+      descricao: String(r[idx.DESCRICAO] || ''),
+      status: stNormalizado,
+      solicitante: String(r[idx.SOLICITANTE_NOME] || r[idx.NOME_LOJA] || ''),
+      solicitanteCpf: String(r[idx.SOLICITANTE_CPF] || ''),
+      solicitanteContato: String(r[idx.SOLICITANTE_CONTATO] || ''),
+      solicitanteEmail: String(r[idx.SOLICITANTE_EMAIL] || ''),
+      prestador: String(r[idx.PRESTADOR_NOME] || r[idx.RESPONSAVEL] || ''),
+      prestadorCpf: String(r[idx.PRESTADOR_CPF] || ''),
+      prestadorContato: String(r[idx.PRESTADOR_CONTATO] || ''),
+      prestadorEmpresa: String(r[idx.PRESTADOR_EMPRESA] || ''),
+      equipe: String(r[idx.EQUIPE_AJUDANTES] || ''),
+      tipoSolicitacao: String(r[idx.TIPO_SOLICITACAO] || ''),
+      dataInicio: formatarDataSimplesS2610_(r[idx.DATA_INICIO_SERVICO] || r[idx.DATA_INSTALACAO]),
+      dataFim: formatarDataSimplesS2610_(r[idx.DATA_FIM_SERVICO] || r[idx.VALIDADE]),
+      horario: String(r[idx.HORARIO_SERVICO] || ''),
+      horarioSegunda: String(r[idx.HORARIO_SEGUNDA] || ''),
+      rua: String(r[idx.RUA] || ''),
+      trecho: String(r[idx.TRECHO] || ''),
+      cruzamento: String(r[idx.CRUZAMENTO] || ''),
+      referencia: String(r[idx.REFERENCIA] || ''),
+      numeroLoja: String(r[idx.NUMERO_LOJA] || ''),
+      luc: String(r[idx.LUC] || ''),
+      nomeLoja: String(r[idx.NOME_LOJA] || ''),
+      idMapaSetor: String(r[idx.ID_MAPA_SETOR] || ''),
+      mapa: String(r[idx.MAPA] || ''),
+      piso: String(r[idx.PISO] || ''),
+      x: Number(r[idx.X_NORMALIZADO]) || 0,
+      y: Number(r[idx.Y_NORMALIZADO]) || 0,
+      criadoEm: dataCriadoFormatada,
+      concluidoEm: dataConcluidoFormatada,
+      rawTs: (criadoEm instanceof Date && !isNaN(criadoEm)) ? criadoEm.getTime() : 0
+    });
+  }
+
+  itens.sort((a, b) => b.rawTs - a.rawTs);
+
+  return {
+    ok: true,
+    total: itens.length,
+    kpis: {
+      total: itens.length,
+      abertas: countAbertas,
+      pendentes: countPendentes,
+      concluidas: countConcluidas
+    },
+    itens: itens
+  };
+}
+
+function formatarDataSimplesS2610_(val) {
+  if (!val) return '';
+  if (val instanceof Date && !isNaN(val)) {
+    return Utilities.formatDate(val, APP.TIMEZONE || 'America/Fortaleza', 'dd/MM/yyyy');
+  }
+  const str = String(val).trim();
+  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const dt = new Date(str);
+  if (!isNaN(dt.getTime()) && (str.includes('GMT') || str.includes('T'))) {
+    return Utilities.formatDate(dt, APP.TIMEZONE || 'America/Fortaleza', 'dd/MM/yyyy');
+  }
+  return str.split(' ')[0] || str;
+}
+
+/**
+ * S26.10 — Envia uma Autorização de Serviço (AS) por e-mail para o solicitante e/ou destinatários informados.
+ * Registra o evento de envio no histórico e opcionalmente salva o e-mail na aba REGISTROS.
+ * 
+ * @param {Object} payload { idRegistro, protocolo, destinatario, cc, assunto }
+ * @returns {{ ok: boolean, protocolo: string, destinatario: string, mensagem: string }}
+ */
+function appEnviarEmailAutorizacaoServico(payload) {
+  exigirPermissaoLeituraLojistaS14_();
+  payload = payload || {};
+
+  const id = String(payload.idRegistro || '').trim();
+  const proto = String(payload.protocolo || '').trim();
+  let destinatario = String(payload.destinatario || payload.email || '').trim().toLowerCase();
+  const cc = String(payload.cc || '').trim().toLowerCase();
+
+  if (!id && !proto) {
+    throw new Error('Identificador da AS (ID_REGISTRO ou PROTOCOLO) é obrigatório.');
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName('REGISTROS');
+  if (!sh || sh.getLastRow() < 2) {
+    throw new Error('Aba REGISTROS não encontrada ou sem dados.');
+  }
+
+  const values = sh.getDataRange().getValues();
+  const head = values[0].map(v => String(v || '').trim());
+  const idx = {};
+  head.forEach((h, i) => idx[h] = i);
+
+  const rowIndex = values.findIndex((r, i) => {
+    if (i === 0) return false;
+    const rId = String(r[idx.ID_REGISTRO] || '').trim();
+    const rProto = String(r[idx.PROTOCOLO] || '').trim();
+    return (id && rId === id) || (proto && rProto === proto);
+  });
+
+  if (rowIndex < 1) {
+    throw new Error('Autorização de Serviço não encontrada na base de dados.');
+  }
+
+  const row = values[rowIndex];
+  const emailGravado = String(idx.SOLICITANTE_EMAIL >= 0 ? row[idx.SOLICITANTE_EMAIL] : '').trim().toLowerCase();
+
+  if (!destinatario) {
+    destinatario = emailGravado;
+  }
+
+  if (!destinatario || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destinatario)) {
+    throw new Error('E-mail do solicitante inválido ou não informado: "' + (destinatario || '') + '".');
+  }
+
+  // Se o destinatário informado for novo e a planilha estiver vazia, atualiza na planilha
+  if (idx.SOLICITANTE_EMAIL >= 0 && destinatario && (!emailGravado || emailGravado !== destinatario)) {
+    try {
+      sh.getRange(rowIndex + 1, idx.SOLICITANTE_EMAIL + 1).setValue(destinatario);
+    } catch (eEmail) {
+      console.warn('[AS EMAIL] Falha ao atualizar e-mail na planilha:', eEmail);
+    }
+  }
+
+  // Monta objeto estruturado com todos os dados da AS
+  const asData = {
+    protocolo: String(row[idx.PROTOCOLO] || proto || 'SIG-AS-00000000'),
+    criadoEm: formatarDataSimplesS2610_(row[idx.CRIADO_EM]) || Utilities.formatDate(new Date(), APP.TIMEZONE || 'America/Fortaleza', 'dd/MM/yyyy HH:mm'),
+    status: String(row[idx.STATUS] || 'AUTORIZADO').toUpperCase(),
+    solicitante: String(row[idx.SOLICITANTE_NOME] || row[idx.NOME_LOJA] || 'Solicitante'),
+    solicitanteCpf: String(row[idx.SOLICITANTE_CPF] || '—'),
+    solicitanteContato: String(row[idx.SOLICITANTE_CONTATO] || '—'),
+    solicitanteEmail: destinatario,
+    setor: String(row[idx.MAPA] || row[idx.ID_MAPA_SETOR] || 'GERAL').toUpperCase(),
+    rua: String(row[idx.RUA] || '—'),
+    box: String(row[idx.NUMERO_LOJA] || row[idx.LUC] || 'S/N'),
+    luc: String(row[idx.LUC] || ''),
+    trecho: String(row[idx.TRECHO] || ''),
+    tipoSolicitacao: String(row[idx.TIPO_SOLICITACAO] || row[idx.TIPO] || 'Serviço'),
+    descricao: String(row[idx.DESCRICAO] || 'Sem descrição adicional.'),
+    dataInicio: formatarDataSimplesS2610_(row[idx.DATA_INICIO_SERVICO] || row[idx.DATA_INSTALACAO]),
+    dataFim: formatarDataSimplesS2610_(row[idx.DATA_FIM_SERVICO] || row[idx.VALIDADE]),
+    horario: String(row[idx.HORARIO_SERVICO] || 'Conforme regulamento operacional'),
+    horarioSegunda: String(row[idx.HORARIO_SEGUNDA] || 'Conforme regulamento operacional'),
+    prestador: String(row[idx.PRESTADOR_NOME] || row[idx.RESPONSAVEL] || '—'),
+    prestadorCpf: String(row[idx.PRESTADOR_CPF] || '—'),
+    prestadorContato: String(row[idx.PRESTADOR_CONTATO] || '—'),
+    prestadorEmail: String(idx.PRESTADOR_EMAIL >= 0 && row[idx.PRESTADOR_EMAIL] ? row[idx.PRESTADOR_EMAIL] : '—'),
+    prestadorEmpresa: String(row[idx.PRESTADOR_EMPRESA] || '—'),
+    equipe: String(row[idx.EQUIPE_AJUDANTES] || 'Não informada'),
+    itensRetirada: String(row[idx.ITENS_RETIRADA] || ''),
+    estrutura: String(row[idx.SERVICO_ESTRUTURA] || ''),
+    revestimento: String(row[idx.SERVICO_REVESTIMENTO] || ''),
+    instalacoes: String(row[idx.SERVICO_INSTALACOES] || ''),
+    empresaInternet: String(row[idx.EMPRESA_INTERNET] || '')
+  };
+
+  // Obtém o nome da pessoa logada / operador oficial da emissão
+  let operadorNome = String(payload.operadorNome || '').trim();
+  if (!operadorNome) {
+    try {
+      const sessao = (typeof sessaoAtualS14_ === 'function') ? sessaoAtualS14_() : null;
+      if (sessao && sessao.autenticado && sessao.nome && !/indisponível|não identificado|sem autorização/i.test(sessao.nome)) {
+        operadorNome = String(sessao.nome).trim();
+      } else if (sessao && sessao.email) {
+        const u = (typeof obterUsuarioS14_ === 'function') ? obterUsuarioS14_(sessao.email) : null;
+        if (u && u.NOME) operadorNome = String(u.NOME).trim();
+      }
+    } catch (_) {}
+  }
+  if (!operadorNome) {
+    try {
+      const emailRpc = (typeof usuarioRpcAtualS223_ === 'function' ? usuarioRpcAtualS223_()?.email : null) || Session.getActiveUser().getEmail();
+      if (emailRpc) {
+        const u = (typeof obterUsuarioS14_ === 'function') ? obterUsuarioS14_(emailRpc) : null;
+        if (u && u.NOME) {
+          operadorNome = String(u.NOME).trim();
+        } else {
+          operadorNome = String(emailRpc.split('@')[0]).replace(/[._]/g, ' ').trim();
+        }
+      }
+    } catch (_) {}
+  }
+  if (!operadorNome) operadorNome = 'CENTRAL DE OPERAÇÕES';
+  asData.operadorNome = operadorNome.toUpperCase();
+
+  // Gera o PDF oficial da Autorização de Serviço para anexar ao e-mail
+  let pdfBlob = null;
+  try {
+    const htmlPdf = montarHtmlDocumentoPdf_(asData);
+    const blobHtml = Utilities.newBlob(htmlPdf, 'text/html', 'documento.html');
+    const nomePdf = `Autorizacao_Servico_${asData.protocolo}.pdf`;
+    pdfBlob = blobHtml.getAs('application/pdf').setName(nomePdf);
+  } catch (errPdf) {
+    console.warn('[AS EMAIL] Falha ao gerar PDF anexo da AS:', errPdf);
+  }
+
+  const localRotulo = asData.box && asData.box !== 'S/N' ? `Box ${asData.box}` : asData.rua;
+  const assunto = payload.assunto || `Autorização para Serviço (${asData.protocolo}) — ${localRotulo} — Centro Fashion`;
+  const tpl = montarTemplateEmailAS_(asData);
+
+  const opcoesEnvio = {
+    to: destinatario,
+    subject: assunto,
+    body: tpl.texto,
+    htmlBody: tpl.html,
+    name: 'CEOP — Centro Fashion Fortaleza'
+  };
+  if (cc && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cc)) {
+    opcoesEnvio.cc = cc;
+  }
+  if (pdfBlob) {
+    opcoesEnvio.attachments = [pdfBlob];
+  }
+
+  MailApp.sendEmail(opcoesEnvio);
+
+  // Registra no histórico de auditoria
+  try {
+    const shHist = ss.getSheetByName('REGISTRO_HISTORICO');
+    if (shHist) {
+      const agora = new Date();
+      const usuario = (usuarioRpcAtualS223_()?.email || Session.getActiveUser().getEmail()) || 'WEB_APP';
+      appendObjetoPorCabecalhoS7_(shHist, {
+        ID_HISTORICO: 'HIST-' + Utilities.getUuid().replace(/-/g, '').slice(0, 16).toUpperCase(),
+        ID_REGISTRO: String(row[idx.ID_REGISTRO] || id),
+        PROTOCOLO: asData.protocolo,
+        DATA_HORA: agora,
+        TIPO_EVENTO: 'ENVIO_EMAIL_AS',
+        STATUS_ANTERIOR: asData.status,
+        STATUS_NOVO: asData.status,
+        VALOR_ANTERIOR: '',
+        VALOR_NOVO: JSON.stringify({ destinatario: destinatario, cc: cc || '', anexoPdf: !!pdfBlob }),
+        ESTADO_CONSERVACAO: String(row[idx.ESTADO_CONSERVACAO] || ''),
+        CONDICAO: String(row[idx.CONDICAO] || ''),
+        RESPONSAVEL_INSPECAO: usuario,
+        OBSERVACAO: `Autorização de Serviço enviada por e-mail para ${destinatario}${cc ? ' (Cc: ' + cc + ')' : ''}${pdfBlob ? ' com PDF anexo' : ''}.`,
+        ORIGEM: 'WEB_APP',
+        DEVICE_ID: String(payload.deviceId || ''),
+        VERSAO_APP: APP.VERSAO
+      });
+    }
+  } catch (errHist) {
+    console.warn('[AS EMAIL] Falha ao registrar histórico de envio:', errHist);
+  }
+
+  return {
+    ok: true,
+    protocolo: asData.protocolo,
+    destinatario: destinatario,
+    cc: cc || '',
+    anexoPdf: !!pdfBlob,
+    mensagem: `Autorização de Serviço ${asData.protocolo} enviada com sucesso para ${destinatario}${pdfBlob ? ' com PDF em anexo' : ''}!`
+  };
+}
+
+/**
+ * Gera os formatos HTML e Texto Puro do e-mail corporativo de Autorização de Serviço.
+ */
+function montarTemplateEmailAS_(d) {
+  const localCompleto = [
+    d.setor ? `Setor ${d.setor}` : '',
+    d.rua ? `${d.rua}` : '',
+    d.box && d.box !== 'S/N' ? `Box ${d.box}${d.luc ? ' (' + d.luc + ')' : ''}` : ''
+  ].filter(Boolean).join(' • ') || 'Localização no Mall';
+
+  const periodoDatas = d.dataInicio
+    ? `${d.dataInicio}${d.dataFim && d.dataFim !== d.dataInicio ? ' a ' + d.dataFim : ''}`
+    : 'Conforme cronograma aprovado';
+
+  let escopoHtml = '';
+  if (d.itensRetirada) escopoHtml += `<tr><td style="padding:6px 12px; font-size:12px; color:#64748B; font-weight:700;">ITENS A RETIRAR:</td><td style="padding:6px 12px; font-size:13px; color:#0F172A;">${d.itensRetirada}</td></tr>`;
+  if (d.estrutura) escopoHtml += `<tr><td style="padding:6px 12px; font-size:12px; color:#64748B; font-weight:700;">ESTRUTURA:</td><td style="padding:6px 12px; font-size:13px; color:#0F172A;">${d.estrutura}</td></tr>`;
+  if (d.revestimento) escopoHtml += `<tr><td style="padding:6px 12px; font-size:12px; color:#64748B; font-weight:700;">REVESTIMENTO:</td><td style="padding:6px 12px; font-size:13px; color:#0F172A;">${d.revestimento}</td></tr>`;
+  if (d.instalacoes) escopoHtml += `<tr><td style="padding:6px 12px; font-size:12px; color:#64748B; font-weight:700;">INSTALAÇÕES:</td><td style="padding:6px 12px; font-size:13px; color:#0F172A;">${d.instalacoes}</td></tr>`;
+  if (d.empresaInternet && d.empresaInternet !== 'NÃO SE APLICA') escopoHtml += `<tr><td style="padding:6px 12px; font-size:12px; color:#64748B; font-weight:700;">OPERADORA DE INTERNET:</td><td style="padding:6px 12px; font-size:13px; color:#1D4ED8; font-weight:700;">${d.empresaInternet}</td></tr>`;
+
+  let prestadorHtml = '';
+  if (d.tipoSolicitacao !== 'RETIRADA DE PERTENCES' && (d.prestador !== '—' || d.prestadorEmpresa !== '—')) {
+    prestadorHtml = `
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; margin-top:16px; overflow:hidden;">
+        <div style="background:#F1F5F9; border-bottom:1px solid #CBD5E1; padding:8px 14px; font-size:11px; font-weight:800; color:#1E293B; text-transform:uppercase; letter-spacing:0.05em;">
+          👷 Prestador de Serviços e Equipe Autorizada
+        </div>
+        <table style="width:100%; border-collapse:collapse;">
+          <tr>
+            <td style="padding:8px 14px; width:40%; font-size:12px; color:#64748B; font-weight:700;">NOME / RESPONSÁVEL:</td>
+            <td style="padding:8px 14px; font-size:13px; color:#0F172A; font-weight:700;">${d.prestador}</td>
+          </tr>
+          ${d.prestadorCpf && d.prestadorCpf !== '—' ? `<tr><td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">CPF:</td><td style="padding:8px 14px; font-size:13px; color:#0F172A;">${d.prestadorCpf}</td></tr>` : ''}
+          ${d.prestadorContato && d.prestadorContato !== '—' ? `<tr><td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">CONTATO:</td><td style="padding:8px 14px; font-size:13px; color:#0F172A;">${d.prestadorContato}</td></tr>` : ''}
+          ${d.prestadorEmail && d.prestadorEmail !== '—' ? `<tr><td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">E-MAIL:</td><td style="padding:8px 14px; font-size:13px; color:#0F172A;">${d.prestadorEmail}</td></tr>` : ''}
+          ${d.prestadorEmpresa && d.prestadorEmpresa !== '—' ? `<tr><td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">EMPRESA EXECUTORA:</td><td style="padding:8px 14px; font-size:13px; color:#0F172A; font-weight:700;">${d.prestadorEmpresa}</td></tr>` : ''}
+          ${d.equipe && d.equipe !== 'Não informada' ? `<tr><td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">EQUIPE / INTEGRANTES:</td><td style="padding:8px 14px; font-size:13px; color:#0F172A;">${d.equipe}</td></tr>` : ''}
+        </table>
+      </div>
+    `;
+  }
+
+  const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Autorização para Execução de Serviços</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F1F5F9; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#1E293B; -webkit-text-size-adjust:100%;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F1F5F9; padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <!-- CONTAINER PRINCIPAL -->
+        <table width="640" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF; border-radius:10px; overflow:hidden; box-shadow:0 4px 18px rgba(15,23,42,0.08); max-width:640px; width:100%;">
+          
+          <!-- CABEÇALHO AZUL NAVY -->
+          <tr>
+            <td style="background-color:#171B68; padding:24px 28px; text-align:left;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <div style="font-size:11px; font-weight:800; color:#93C5FD; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:4px;">
+                      CENTRO FASHION FORTALEZA • CEOP
+                    </div>
+                    <div style="font-size:20px; font-weight:900; color:#FFFFFF; letter-spacing:-0.01em;">
+                      Autorização para Execução de Serviços
+                    </div>
+                  </td>
+                  <td align="right" valign="middle">
+                    <span style="display:inline-block; background-color:#10B981; color:#FFFFFF; font-size:11px; font-weight:900; padding:5px 12px; border-radius:16px; letter-spacing:0.04em; text-transform:uppercase;">
+                      ${d.status}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- FAIXA PROTOCOLO -->
+          <tr>
+            <td style="background-color:#F8FAFC; border-bottom:1.5px solid #E2E8F0; padding:12px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <span style="font-size:10px; font-weight:800; color:#64748B; text-transform:uppercase; display:block;">PROTOCOLO ELETRÔNICO</span>
+                    <strong style="font-size:15px; color:#0F172A; font-family:monospace; letter-spacing:0.02em;">${d.protocolo}</strong>
+                  </td>
+                  <td align="right">
+                    <span style="font-size:10px; font-weight:800; color:#64748B; text-transform:uppercase; display:block;">EMISSÃO</span>
+                    <strong style="font-size:13px; color:#334155;">${d.criadoEm}</strong>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CORPO PRINCIPAL -->
+          <tr>
+            <td style="padding:24px 28px;">
+
+              <!-- MENSAGEM INTRODUTÓRIA -->
+              <p style="margin:0 0 16px 0; font-size:14px; line-height:1.5; color:#334155;">
+                Olá, <strong>${d.solicitante}</strong>!<br>
+                Sua solicitação de serviço foi devidamente registrada e autorizada pela Central de Operações (CEOP). Abaixo constam os dados e instruções para execução:
+              </p>
+
+              <!-- AVISO DE ANEXO PDF -->
+              <div style="background-color:#EFF6FF; border:1.5px solid #3B82F6; border-radius:8px; padding:12px 16px; margin-bottom:18px;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td width="32" valign="middle" style="font-size:22px;">📎</td>
+                    <td valign="middle" style="padding-left:10px;">
+                      <strong style="color:#1E40AF; font-size:13px; display:block;">Documento Oficial em Anexo (PDF)</strong>
+                      <span style="color:#2563EB; font-size:11.5px; line-height:1.4; display:block;">
+                        O documento oficial de autorização segue anexado a este e-mail (<strong>Autorizacao_Servico_${d.protocolo}.pdf</strong>) para impressão ou apresentação à fiscalização da CEOP.
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- CARD: LOCALIZAÇÃO & SOLICITANTE -->
+              <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; margin-bottom:16px; overflow:hidden;">
+                <div style="background:#F1F5F9; border-bottom:1px solid #CBD5E1; padding:8px 14px; font-size:11px; font-weight:800; color:#1E293B; text-transform:uppercase; letter-spacing:0.05em;">
+                  📍 Identificação e Localização
+                </div>
+                <table style="width:100%; border-collapse:collapse;">
+                  <tr>
+                    <td style="padding:8px 14px; width:40%; font-size:12px; color:#64748B; font-weight:700;">SOLICITANTE:</td>
+                    <td style="padding:8px 14px; font-size:13px; color:#0F172A; font-weight:700;">${d.solicitante}</td>
+                  </tr>
+                  ${d.solicitanteCpf && d.solicitanteCpf !== '—' ? `<tr><td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">CPF:</td><td style="padding:8px 14px; font-size:13px; color:#0F172A;">${d.solicitanteCpf}</td></tr>` : ''}
+                  ${d.solicitanteContato && d.solicitanteContato !== '—' ? `<tr><td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">CONTATO:</td><td style="padding:8px 14px; font-size:13px; color:#0F172A;">${d.solicitanteContato}</td></tr>` : ''}
+                  <tr>
+                    <td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">LOCAL / ESPAÇO:</td>
+                    <td style="padding:8px 14px; font-size:13px; color:#1E293B; font-weight:800;">${localCompleto}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- CARD: PERÍODO & HORÁRIOS -->
+              <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; margin-bottom:16px; overflow:hidden;">
+                <div style="background:#F1F5F9; border-bottom:1px solid #CBD5E1; padding:8px 14px; font-size:11px; font-weight:800; color:#1E293B; text-transform:uppercase; letter-spacing:0.05em;">
+                  ⏰ Período e Horários Autorizados
+                </div>
+                <table style="width:100%; border-collapse:collapse;">
+                  <tr>
+                    <td style="padding:8px 14px; width:40%; font-size:12px; color:#64748B; font-weight:700;">DATA / VALIDADE:</td>
+                    <td style="padding:8px 14px; font-size:13px; color:#0F172A; font-weight:700;">${periodoDatas}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">HORÁRIO PERMITIDO:</td>
+                    <td style="padding:8px 14px; font-size:13px; color:#059669; font-weight:800;">${d.horario}</td>
+                  </tr>
+                  ${d.horarioSegunda ? `<tr><td style="padding:8px 14px; font-size:12px; color:#64748B; font-weight:700;">SEGUNDAS-FEIRAS:</td><td style="padding:8px 14px; font-size:13px; color:#0F172A;">${d.horarioSegunda}</td></tr>` : ''}
+                </table>
+              </div>
+
+              <!-- CARD: ESCOPO DO SERVIÇO -->
+              <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; margin-bottom:16px; overflow:hidden;">
+                <div style="background:#F1F5F9; border-bottom:1px solid #CBD5E1; padding:8px 14px; font-size:11px; font-weight:800; color:#1E293B; text-transform:uppercase; letter-spacing:0.05em;">
+                  🛠️ Tipo de Solicitação e Escopo
+                </div>
+                <div style="padding:10px 14px; border-bottom:1px solid #E2E8F0;">
+                  <span style="font-size:11px; font-weight:700; color:#64748B; text-transform:uppercase; display:block;">TIPO:</span>
+                  <strong style="font-size:14px; color:#D97706;">${d.tipoSolicitacao}</strong>
+                </div>
+                ${escopoHtml ? `<table style="width:100%; border-collapse:collapse; border-bottom:1px solid #E2E8F0;">${escopoHtml}</table>` : ''}
+                <div style="padding:10px 14px; background:#FFFFFF;">
+                  <span style="font-size:11px; font-weight:700; color:#64748B; text-transform:uppercase; display:block; margin-bottom:4px;">DESCRIÇÃO ESPECÍFICA:</span>
+                  <div style="font-size:13px; line-height:1.45; color:#334155;">${d.descricao}</div>
+                </div>
+              </div>
+
+              <!-- PRESTADOR DE SERVIÇOS (SE HOUVER) -->
+              ${prestadorHtml}
+
+              <!-- AVISO OPERACIONAL / REGRAS -->
+              <div style="background:#FEF3C7; border:1px solid #F59E0B; border-radius:8px; padding:12px 16px; margin-top:20px;">
+                <strong style="color:#92400E; font-size:12px; display:block; margin-bottom:4px;">⚠️ Normas Operacionais e Instruções Obrigatórias:</strong>
+                <ul style="margin:0; padding-left:18px; font-size:11.5px; color:#78350F; line-height:1.45;">
+                  <li>Mantenha esta autorização (ou cópia em tela de celular) no box durante todo o período de execução.</li>
+                  <li>Obrigatório o uso de EPIs adequados para prestadores (Circular 004/2025).</li>
+                  <li>Proibida solda direta na estrutura do condomínio e respeitar o limite de carga elétrica.</li>
+                  <li>Resíduos e entulhos devem ser descartados nos locais devidamente sinalizados.</li>
+                </ul>
+              </div>
+
+            </td>
+          </tr>
+
+          <!-- RODAPÉ CORPORATIVO -->
+          <tr>
+            <td style="background-color:#0F172A; color:#94A3B8; padding:20px 28px; text-align:center; font-size:11px; line-height:1.5;">
+              <div style="font-weight:700; color:#F8FAFC; margin-bottom:4px;">Centro Fashion Fortaleza • Central de Operações (CEOP)</div>
+              <div>Av. Filomeno Gomes, 430 - Jacarecanga, Fortaleza - CE • CEP 60010-280</div>
+              <div style="margin-top:8px; font-size:10px; color:#64748B;">Documento gerado eletronicamente pelo Sistema de Sinalização e Gestão do Mall • Autenticação: ${d.protocolo}</div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const texto = `AUTORIZAÇÃO PARA EXECUÇÃO DE SERVIÇOS (AS)
+CENTRO FASHION FORTALEZA • CEOP
+=====================================================
+Protocolo: ${d.protocolo}
+Data de Emissão: ${d.criadoEm}
+Status: ${d.status}
+Anexo Oficial: Autorizacao_Servico_${d.protocolo}.pdf (Documento Oficial em PDF)
+
+1. IDENTIFICAÇÃO DO SOLICITANTE E LOCAL
+Solicitante: ${d.solicitante}
+CPF: ${d.solicitanteCpf}
+Contato: ${d.solicitanteContato}
+Local: ${localCompleto}
+
+2. PERÍODO E HORÁRIOS AUTORIZADOS
+Período: ${periodoDatas}
+Horário Autorizado: ${d.horario}
+Horário Segundas: ${d.horarioSegunda}
+
+3. ESCOPO DO SERVIÇO
+Tipo: ${d.tipoSolicitacao}
+Descrição: ${d.descricao}
+
+4. PRESTADOR RESPONSÁVEL
+Prestador: ${d.prestador}
+Empresa: ${d.prestadorEmpresa}
+Contato: ${d.prestadorContato}
+Equipe: ${d.equipe}
+
+Normas Operacionais:
+- Mantenha este comprovante visível no box durante a execução.
+- Obrigatório o uso de EPIs.
+- Proibida solda direta e respeitar limites de carga elétrica e descarte de resíduos.
+
+Centro Fashion Fortaleza • CEOP (Central de Operações)
+`;
+
+  return { html, texto };
+}
+
+/**
+ * Logotipo oficial do Centro Fashion Fortaleza em Base64 PNG.
+ */
+const LOGO_CENTRO_FASHION_B64_ = 'data:image/png;base64,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';
+
+/**
+ * Rubrica oficial do gerente Lucas Silva Arruda (CEOP) em Base64.
+ */
+const RUBRICA_LUCAS_ARRUDA_B64_ = 'data:image/png;base64,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';
+
+/**
+ * Gera o documento HTML oficial de Autorização para Execução de Serviços
+ * estruturado com marcações semânticas e tabelas para conversão perfeita em PDF A4.
+ *
+ * @param {Object} d Dados estruturados da Autorização de Serviço.
+ * @returns {string} Código HTML completo pronto para Utilities.newBlob().
+ */
+function montarHtmlDocumentoPdf_(d) {
+  d = d || {};
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const protocolo = esc(d.protocolo || 'SIG-AS-00000000');
+  const operador = esc(String(d.operadorNome || 'CENTRAL DE OPERAÇÕES').toUpperCase());
+  const criadoEm = esc(d.criadoEm || Utilities.formatDate(new Date(), APP.TIMEZONE || 'America/Fortaleza', 'dd/MM/yyyy HH:mm'));
+  const status = esc(String(d.status || 'AUTORIZADO').toUpperCase());
+  const solicitante = esc(String(d.solicitante || 'NÃO INFORMADO').toUpperCase());
+  const solicitanteCpf = esc(d.solicitanteCpf || '—');
+  const solicitanteContato = esc(d.solicitanteContato || '—');
+  const solicitanteEmail = esc(d.solicitanteEmail || '—');
+
+  const setor = esc(d.setor || 'GERAL');
+  const rua = esc(d.rua || '—');
+  const box = esc(d.box || 'S/N');
+
+  const tipoSolicitacao = esc(String(d.tipoSolicitacao || 'AUTORIZAÇÃO DE SERVIÇO').toUpperCase().replace(/^AS\s*—\s*/, ''));
+  const dataInicio = esc(d.dataInicio || '—');
+  const dataFim = esc(d.dataFim || '—');
+  const horario = esc(d.horario || '07:00 AS 09:00');
+  const horarioSegunda = esc(d.horarioSegunda || 'NÃO SE APLICA');
+
+  const itensRetirada = esc(d.itensRetirada || '');
+  const estrutura = esc(d.estrutura || '');
+  const revestimento = esc(d.revestimento || '');
+  const instalacoes = esc(d.instalacoes || '');
+  const empresaInternet = esc(d.empresaInternet || '');
+  const descricao = esc(d.descricao || '—');
+
+  const prestador = esc(String(d.prestador || '—').toUpperCase());
+  const prestadorCpf = esc(d.prestadorCpf || '—');
+  const prestadorContato = esc(d.prestadorContato || '—');
+  const prestadorEmail = esc(d.prestadorEmail || '—');
+  const prestadorEmpresa = esc(d.prestadorEmpresa || 'NÃO APLICÁVEL');
+  const equipe = esc(d.equipe || 'Não informada');
+
+  let camposExtrasEscopo = '';
+  if (itensRetirada) {
+    camposExtrasEscopo += `<tr><td style="padding:4px 8px; font-size:7.5pt; color:#64748B; font-weight:bold; width:30%;">ITENS A RETIRAR:</td><td style="padding:4px 8px; font-size:8.5pt; color:#0F172A; font-weight:bold;">${itensRetirada}</td></tr>`;
+  }
+  if (estrutura) {
+    camposExtrasEscopo += `<tr><td style="padding:4px 8px; font-size:7.5pt; color:#64748B; font-weight:bold; width:30%;">ESTRUTURA:</td><td style="padding:4px 8px; font-size:8.5pt; color:#0F172A; font-weight:bold;">${estrutura}</td></tr>`;
+  }
+  if (revestimento) {
+    camposExtrasEscopo += `<tr><td style="padding:4px 8px; font-size:7.5pt; color:#64748B; font-weight:bold; width:30%;">REVESTIMENTO:</td><td style="padding:4px 8px; font-size:8.5pt; color:#0F172A; font-weight:bold;">${revestimento}</td></tr>`;
+  }
+  if (instalacoes) {
+    camposExtrasEscopo += `<tr><td style="padding:4px 8px; font-size:7.5pt; color:#64748B; font-weight:bold; width:30%;">INSTALAÇÕES:</td><td style="padding:4px 8px; font-size:8.5pt; color:#0F172A; font-weight:bold;">${instalacoes}</td></tr>`;
+  }
+  if (empresaInternet && empresaInternet !== 'NÃO SE APLICA') {
+    camposExtrasEscopo += `<tr><td style="padding:4px 8px; font-size:7.5pt; color:#64748B; font-weight:bold; width:30%;">OPERADORA INTERNET:</td><td style="padding:4px 8px; font-size:8.5pt; color:#1D4ED8; font-weight:bold;">${empresaInternet}</td></tr>`;
+  }
+
+  let prestadorSection = '';
+  if (tipoSolicitacao !== 'RETIRADA DE PERTENCES') {
+    prestadorSection = `
+      <div style="margin-bottom:12px; border:1px solid #CBD5E1; border-radius:5px; overflow:hidden;">
+        <div style="background-color:#F1F5F9; border-bottom:1px solid #CBD5E1; padding:5px 8px; font-size:8pt; font-weight:bold; color:#1E293B; text-transform:uppercase; letter-spacing:0.04em;">
+          4. Prestador de Serviços e Equipe Técnica Responsável
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+          <tr>
+            <td style="padding:6px 8px; width:50%; border-right:1px solid #F1F5F9; border-bottom:1px solid #F1F5F9;">
+              <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Nome do Prestador</span>
+              <strong style="font-size:8.5pt; color:#0F172A;">${prestador}</strong>
+            </td>
+            <td style="padding:6px 8px; width:25%; border-right:1px solid #F1F5F9; border-bottom:1px solid #F1F5F9;">
+              <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">CPF do Prestador</span>
+              <strong style="font-size:8.5pt; color:#0F172A;">${prestadorCpf}</strong>
+            </td>
+            <td style="padding:6px 8px; width:25%; border-bottom:1px solid #F1F5F9;">
+              <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Telefone de Contato</span>
+              <strong style="font-size:8.5pt; color:#0F172A;">${prestadorContato}</strong>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:6px 8px; border-right:1px solid #F1F5F9;">
+              <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">E-mail do Prestador</span>
+              <strong style="font-size:8.5pt; color:#0F172A;">${prestadorEmail}</strong>
+            </td>
+            <td colspan="2" style="padding:6px 8px;">
+              <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Empresa Executora</span>
+              <strong style="font-size:8.5pt; color:#0F172A;">${prestadorEmpresa}</strong>
+            </td>
+          </tr>
+        </table>
+        <div style="background-color:#F8FAFC; border-top:1px solid #E2E8F0; padding:6px 8px;">
+          <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block; margin-bottom:2px;">Equipe / Integrantes Autorizados:</span>
+          <div style="font-size:8pt; color:#334155;">${equipe}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Autorização para Execução de Serviços - ${protocolo}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 8mm 10mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 8.5pt;
+      line-height: 1.35;
+      color: #111827;
+      margin: 0;
+      padding: 0;
+      background: #FFFFFF;
+    }
+  </style>
+</head>
+<body>
+  <div style="max-width:210mm; margin:0 auto; padding:0 2mm;">
+    
+    <!-- CABEÇALHO -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-bottom:2.5px solid #1E293B; padding-bottom:10px; margin-bottom:12px;">
+      <tr>
+        <td width="55" valign="middle">
+          <img src="${LOGO_CENTRO_FASHION_B64_}" width="48" height="48" alt="Centro Fashion" style="display:block;" />
+        </td>
+        <td valign="middle" style="padding-left:10px;">
+          <div style="font-size:14pt; font-weight:900; color:#0F172A; text-transform:uppercase; letter-spacing:-0.01em;">AUTORIZAÇÃO</div>
+          <div style="font-size:8pt; font-weight:bold; color:#64748B; letter-spacing:0.02em;">CENTRAL DE OPERAÇÕES • AUTORIZAÇÃO PARA EXECUÇÃO DE SERVIÇOS (AS)</div>
+        </td>
+        <td align="right" valign="middle">
+          <div style="border:1.5px solid #10B981; background-color:#ECFDF5; border-radius:6px; padding:4px 10px; text-align:center; display:inline-block;">
+            <span style="display:block; font-size:6.5pt; font-weight:bold; color:#047857; text-transform:uppercase; letter-spacing:0.04em;">STATUS</span>
+            <strong style="display:block; font-size:10pt; font-weight:900; color:#065F46;">${status}</strong>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- FAIXA DE METADADOS -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F8FAFC; border:1px solid #CBD5E1; border-radius:5px; margin-bottom:12px;">
+      <tr>
+        <td width="36%" style="padding:6px 10px; border-right:1px solid #E2E8F0;">
+          <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">PROTOCOLO OFICIAL</span>
+          <strong style="font-size:9.5pt; color:#0F172A; font-family:monospace;">${protocolo}</strong>
+        </td>
+        <td width="34%" style="padding:6px 10px; border-right:1px solid #E2E8F0;">
+          <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">DATA / HORA DE EMISSÃO</span>
+          <strong style="font-size:8.5pt; color:#0F172A;">${criadoEm}</strong>
+        </td>
+        <td width="30%" style="padding:6px 10px;">
+          <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">EMISSÃO ELETRÔNICA</span>
+          <strong style="font-size:8.5pt; color:#0F172A;">SISTEMA CEOP (PORTAL OFICIAL)</strong>
+        </td>
+      </tr>
+    </table>
+
+    <!-- SEÇÃO 1: SOLICITANTE E LOCALIZAÇÃO -->
+    <div style="margin-bottom:12px; border:1px solid #CBD5E1; border-radius:5px; overflow:hidden;">
+      <div style="background-color:#F1F5F9; border-bottom:1px solid #CBD5E1; padding:5px 8px; font-size:8pt; font-weight:bold; color:#1E293B; text-transform:uppercase; letter-spacing:0.04em;">
+        1. Identificação do Solicitante e Localização do Box / Loja
+      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+        <tr>
+          <td style="padding:6px 8px; width:60%; border-right:1px solid #F1F5F9; border-bottom:1px solid #F1F5F9;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Nome Completo do Solicitante</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${solicitante}</strong>
+          </td>
+          <td style="padding:6px 8px; width:40%; border-bottom:1px solid #F1F5F9;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">CPF do Solicitante</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${solicitanteCpf}</strong>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px; border-right:1px solid #F1F5F9; border-bottom:1px solid #E2E8F0;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Contato / WhatsApp</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${solicitanteContato}</strong>
+          </td>
+          <td style="padding:6px 8px; border-bottom:1px solid #E2E8F0;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">E-mail do Solicitante</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${solicitanteEmail}</strong>
+          </td>
+        </tr>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FAFAFA; border-collapse:collapse;">
+        <tr>
+          <td style="padding:6px 8px; width:33%; border-right:1px solid #F1F5F9;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Setor</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${setor}</strong>
+          </td>
+          <td style="padding:6px 8px; width:33%; border-right:1px solid #F1F5F9;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Rua do Setor</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${rua}</strong>
+          </td>
+          <td style="padding:6px 8px; width:34%;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Número do Box / Loja</span>
+            <strong style="font-size:10.5pt; color:#B45309; font-weight:900;">${box}</strong>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- SEÇÃO 2: PERÍODO E HORÁRIOS -->
+    <div style="margin-bottom:12px; border:1px solid #CBD5E1; border-radius:5px; overflow:hidden;">
+      <div style="background-color:#F1F5F9; border-bottom:1px solid #CBD5E1; padding:5px 8px; font-size:8pt; font-weight:bold; color:#1E293B; text-transform:uppercase; letter-spacing:0.04em;">
+        2. Período de Validade e Horários Autorizados
+      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+        <tr>
+          <td style="padding:6px 8px; width:25%; border-right:1px solid #F1F5F9;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Data de Início</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${dataInicio}</strong>
+          </td>
+          <td style="padding:6px 8px; width:25%; border-right:1px solid #F1F5F9;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Data de Finalização</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${dataFim}</strong>
+          </td>
+          <td style="padding:6px 8px; width:25%; border-right:1px solid #F1F5F9;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Horário Autorizado</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${horario}</strong>
+          </td>
+          <td style="padding:6px 8px; width:25%;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Horário Segundas-Feiras</span>
+            <strong style="font-size:8.5pt; color:#0F172A;">${horarioSegunda}</strong>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- SEÇÃO 3: ESCOPO -->
+    <div style="margin-bottom:12px; border:1px solid #CBD5E1; border-radius:5px; overflow:hidden;">
+      <div style="background-color:#F1F5F9; border-bottom:1px solid #CBD5E1; padding:5px 8px; font-size:8pt; font-weight:bold; color:#1E293B; text-transform:uppercase; letter-spacing:0.04em;">
+        3. Tipo de Solicitação e Detalhamento do Escopo
+      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+        <tr>
+          <td style="padding:6px 8px; width:40%; border-bottom:1px solid #E2E8F0;">
+            <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block;">Tipo de Solicitação</span>
+            <strong style="font-size:9pt; color:#1E3A8A;">${tipoSolicitacao}</strong>
+          </td>
+          <td style="padding:6px 8px; width:60%; border-bottom:1px solid #E2E8F0;">
+            ${camposExtrasEscopo ? `<table width="100%" cellpadding="0" cellspacing="0" border="0">${camposExtrasEscopo}</table>` : ''}
+          </td>
+        </tr>
+      </table>
+      <div style="background-color:#F8FAFC; padding:6px 8px;">
+        <span style="font-size:6.5pt; color:#64748B; font-weight:bold; text-transform:uppercase; display:block; margin-bottom:2px;">Descrição Específica do Serviço / Pertences:</span>
+        <div style="font-size:8.5pt; color:#334155; line-height:1.4;">${descricao}</div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 4: PRESTADOR -->
+    ${prestadorSection}
+
+    <!-- NORMAS E LGPD -->
+    <div style="background-color:#F8FAFC; border:1px solid #CBD5E1; border-radius:5px; padding:6px 8px; margin-bottom:14px; font-size:6.5pt; color:#64748B; line-height:1.35;">
+      <div style="margin-bottom:3px;">
+        <strong style="color:#334155;">Normas Operacionais do Centro Fashion Fortaleza:</strong> (1) Proibido solda direta na estrutura dos boxes; (2) Vidros temperados com espessura mínima de 8mm; (3) Altura máxima de testeira = 40cm e forro = 2.70m; (4) Carga elétrica máxima por box de 200W (1A); (5) Proibida qualquer edificação fora dos limites internos dos boxes; (6) Obrigatório uso de EPIs (Circular 004/2025); (7) Resíduos devem ser depositados no contêiner específico; (8) Manter este documento visível no box durante a execução.
+      </div>
+      <div>
+        <strong style="color:#334155;">LGPD (Lei no. 13.709/2018):</strong> O solicitante autorizou expressamente a coleta e tratamento de seus dados pessoais para fins exclusivos de cumprimento desta Autorização de Serviços e segurança patrimonial da CEOP.
+      </div>
+    </div>
+
+    <!-- ASSINATURAS -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px; margin-bottom:10px;">
+      <tr>
+        <td width="46%" align="center" valign="bottom">
+          <div style="height:44px;"></div>
+          <div style="border-top:1.5px solid #1E293B; width:85%; margin-bottom:4px;"></div>
+          <div style="font-size:8pt; font-weight:bold; color:#0F172A;">${solicitante}</div>
+          <div style="font-size:6.5pt; color:#64748B; text-transform:uppercase;">Assinatura do Solicitante / Titular do Box</div>
+        </td>
+        <td width="8%">&nbsp;</td>
+        <td width="46%" align="center" valign="bottom">
+          <div style="height:44px; text-align:center;">
+            <img src="${RUBRICA_LUCAS_ARRUDA_B64_}" width="140" height="38" alt="Rubrica Central de Operações" style="display:block; margin:0 auto -8px auto;" />
+          </div>
+          <div style="border-top:1.5px solid #1E293B; width:85%; margin-bottom:4px;"></div>
+          <div style="font-size:8pt; font-weight:bold; color:#0F172A;">${operador}</div>
+          <div style="font-size:6.5pt; color:#475569; text-transform:uppercase; font-weight:bold;">CENTRAL DE OPERAÇÕES (CEOP)</div>
+          <div style="font-size:6pt; color:#64748B; text-transform:uppercase;">Visto da Fiscalização / Segurança Operacional</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- RODAPÉ DO DOCUMENTO -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px dashed #CBD5E1; padding-top:6px; margin-top:12px; font-size:6.5pt; color:#94A3B8;">
+      <tr>
+        <td>Autenticação: ${protocolo} • Emitido em conformidade com o regulamento do Centro Fashion Fortaleza</td>
+        <td align="right">CEOP • Central de Operações</td>
+      </tr>
+    </table>
+
+  </div>
+</body>
+</html>
+`;
+}
+

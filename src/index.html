@@ -10,7 +10,7 @@
 
 <body>
   <header>
-    <div><strong>Sinalização do Mall</strong><small id="versao">MVP-3.32.0-SINALIZACAO-S26.10</small></div><span
+    <div><strong>CEOP — Central de Operações</strong><small id="versao">MVP-3.32.0-SINALIZACAO-S26.10</small></div><span
       id="status" class="pill">Carregando…</span><button id="userBadgeS14" class="user-badge" type="button"
       title="Sessão atual">Carregando usuário…</button>
   </header>
@@ -20,6 +20,15 @@
         <label class="map-selector-s22513">Mapa / visualização
           <select id="mapaSelect"></select>
         </label>
+        <!-- Localizador Rápido de Loja / Box / LUC -->
+        <div id="localizadorLojaContainer" class="localizador-loja-container">
+          <div class="localizador-input-wrapper">
+            <span class="localizador-icone" aria-hidden="true">🔍</span>
+            <input id="localizadorLojaInput" type="text" placeholder="Localizar loja, box ou LUC (ex: 1252)..." autocomplete="off" spellcheck="false">
+            <button id="localizadorLimparBtn" type="button" class="localizador-limpar-btn" title="Limpar busca" hidden>×</button>
+          </div>
+          <div id="localizadorResultados" class="localizador-dropdown" hidden></div>
+        </div>
         <button id="centralizar" class="centralizar-topo-s22514" type="button" aria-label="Centralizar mapa"
           title="Centralizar mapa">
           <span aria-hidden="true">⌖</span>
@@ -45,6 +54,9 @@
             <div class="app-menu-grid-s22513">
               <button id="novo" class="primary app-menu-item-s22513" type="button">
                 <span class="app-menu-icon-s22513">＋</span><span>Novo registro</span>
+              </button>
+              <button id="menuEmitirAsBtn" class="app-menu-item-s22513 app-menu-item-as" type="button">
+                <span class="app-menu-icon-s22513">📝</span><span>Emitir AS</span>
               </button>
               <button id="camadasBtn" class="app-menu-item-s22513" type="button">
                 <span class="app-menu-icon-s22513">▱</span><span>Camadas</span>
@@ -90,6 +102,12 @@
           <section id="menuGestaoSectionS268D" class="app-menu-section-s268d" aria-labelledby="menuGestaoTituloS268D" hidden>
             <div id="menuGestaoTituloS268D" class="app-menu-section-title-s268d">Gestão</div>
             <div class="app-menu-grid-s22513">
+              <!-- Central de Gestão de Autorizações de Serviço (AS) -->
+              <button id="gestaoAsBtn" class="app-menu-item-s22513 app-menu-item-feature-s268d" type="button" hidden>
+                <span class="app-menu-icon-s22513">📝</span>
+                <span class="app-menu-item-copy-s268d"><strong>Autorizações de Serviço</strong><small>Em aberto, pendentes e concluídas</small></span>
+                <span class="app-menu-chevron-s268d">›</span>
+              </button>
               <button id="cartografiaMenuBtnS268D" class="app-menu-item-s22513 app-menu-item-feature-s268d" type="button" hidden>
                 <span class="app-menu-icon-s22513">⌖</span>
                 <span class="app-menu-item-copy-s268d"><strong>Cartografia</strong><small>Calibração e delimitações</small></span>
@@ -105,6 +123,12 @@
               <button id="referenciasBtnS2610R3" class="app-menu-item-s22513 app-menu-item-feature-s268d" type="button" hidden>
                 <span class="app-menu-icon-s22513">⌖</span>
                 <span class="app-menu-item-copy-s268d"><strong>Referências</strong><small>Pontos, serviços e locais de apoio</small></span>
+                <span class="app-menu-chevron-s268d">›</span>
+              </button>
+              <!-- Gestão de Lojistas e Espaços (Base Mestre Desacoplada) -->
+              <button id="lojistasBtn" class="app-menu-item-s22513 app-menu-item-feature-s268d" type="button" hidden>
+                <span class="app-menu-icon-s22513">🏪</span>
+                <span class="app-menu-item-copy-s268d"><strong>Lojistas</strong><small>Contratos, ocupação e mix comercial</small></span>
                 <span class="app-menu-chevron-s268d">›</span>
               </button>
               <button id="adminBtnS14" class="app-menu-item-s22513" type="button" hidden>
@@ -174,6 +198,8 @@
               id="quickCountCruzamentosS261" class="layer-count-s261">0</span></label>
           <label><input type="checkbox" data-layer="lojas" checked> Lojas <span id="quickCountLojasS261"
               class="layer-count-s261">0</span></label>
+          <label><input id="toggleOcupacaoLojas" type="checkbox"> Situação / Ocupação das Lojas <span id="quickCountOcupacaoS261"
+              class="layer-count-s261">0</span></label>
         </div>
         <div class="layers-footer-s261">
           <button id="gerenciarCamadasS261" class="layers-manage-s261" type="button">Gerenciar camadas <span
@@ -229,6 +255,12 @@
                 <span class="layers-center-label-s261"><strong>Lojas</strong><small>Lojas/LUCs disponíveis na
                     planta</small></span>
                 <span id="centralCountLojasS261" class="layers-center-count-s261">0</span>
+              </label>
+              <label class="layers-center-row-s261">
+                <input id="centralToggleOcupacaoS261" type="checkbox">
+                <span class="layers-center-icon-s261" style="color:#10b981;">●</span>
+                <span class="layers-center-label-s261"><strong>Ocupação / Situação das Lojas</strong><small>Colorir por Disponível, Ocupada, Bloqueada</small></span>
+                <span id="centralCountOcupacaoS261" class="layers-center-count-s261">0</span>
               </label>
             </div>
           </section>
@@ -377,9 +409,46 @@
           <div id="draftLayer" class="marker-layer interactive"></div>
         </div>
         <div class="zoom-info" id="zoomInfo">100%</div>
+
+        <!-- S26.10-CEOP Etapa 2: Legenda Flutuante da Camada de Ocupação -->
+        <aside id="legendaOcupacaoMapa" class="legenda-ocupacao-mapa" hidden aria-live="polite">
+          <div class="legenda-ocupacao-head">
+            <div class="legenda-ocupacao-titulo">
+              <small>CEOP • Ocupação</small>
+              <strong>Situação dos Espaços</strong>
+            </div>
+            <button id="fecharLegendaOcupacao" type="button" class="legenda-ocupacao-fechar" title="Ocultar legenda" aria-label="Ocultar legenda">×</button>
+          </div>
+          <div class="legenda-ocupacao-grid">
+            <div class="legenda-item item-ocupada" title="Lojas em operação comercial ativa">
+              <span class="legenda-cor-dot ocupada"></span>
+              <span class="legenda-rotulo">Ocupadas</span>
+              <strong id="legCountOcupadas" class="legenda-num">0</strong>
+            </div>
+            <div class="legenda-item item-disponivel" title="Lojas vagas disponíveis para locação">
+              <span class="legenda-cor-dot disponivel"></span>
+              <span class="legenda-rotulo">Disponíveis</span>
+              <strong id="legCountDisponiveis" class="legenda-num">0</strong>
+            </div>
+            <div class="legenda-item item-bloqueada" title="Lojas inativas ou bloqueadas">
+              <span class="legenda-cor-dot bloqueada"></span>
+              <span class="legenda-rotulo">Bloqueadas</span>
+              <strong id="legCountBloqueadas" class="legenda-num">0</strong>
+            </div>
+            <div class="legenda-item item-reservada" title="Lojas em processo de locação/reserva">
+              <span class="legenda-cor-dot reservada"></span>
+              <span class="legenda-rotulo">Reservadas</span>
+              <strong id="legCountReservadas" class="legenda-num">0</strong>
+            </div>
+          </div>
+          <div class="legenda-ocupacao-footer">
+            <span>Taxa de Ocupação: <b id="legTaxaOcupacao">0%</b></span>
+          </div>
+        </aside>
+
         <aside id="sinalizacaoMapaCard" class="sinalizacao-map-card" hidden aria-live="polite">
           <div class="sinalizacao-map-card__head">
-            <div><small id="sigCardProtocolo">Sinalização</small><strong id="sigCardTitulo">Registro</strong></div>
+            <div><small id="sigCardProtocolo">CEOP</small><strong id="sigCardTitulo">Registro</strong></div>
             <div class="sig-card-head-actions">
               <button id="cardEditarBtnS237" type="button" class="card-edit-btn-s237" title="Editar cadastro"
                 aria-label="Editar cadastro">✎</button>
@@ -401,6 +470,9 @@
           <p id="sigCardLocal" class="sig-card-line"></p>
           <p id="sigCardResponsavel" class="sig-card-line"></p>
           <div class="sig-card-actions">
+            <button id="btnImprimirAsCard" type="button" class="btn-as-imprimir-card" hidden>📄 Imprimir AS / PDF</button>
+            <button id="btnEditarAsCard" type="button" class="btn-as-editar-card" hidden>✏️ Editar AS</button>
+            <button id="btnConcluirAsCard" type="button" class="btn-as-concluir-card" hidden>✅ Concluir AS</button>
             <button id="btnHistoricoS8" type="button">Histórico</button><button id="btnPendenciasS10"
               type="button">Pendências</button>
             <button id="btnCicloVidaS18" type="button">Ciclo de vida</button><button id="btnNovaInspecao" type="button"
@@ -418,52 +490,478 @@
     <section id="formPanel" class="form-panel" hidden aria-hidden="true">
       <div class="form-head">
         <div><small id="formEyebrowS237">Novo registro</small>
-          <h2 id="formTituloS237">Cadastro de sinalização</h2>
+          <h2 id="formTituloS237">Cadastro de Ativo / Ocorrência — CEOP</h2>
         </div><button id="fecharForm" type="button" class="icon-btn">×</button>
       </div>
       <div class="location-box"><strong>Localização confirmada</strong>
         <div id="formLocalResumo">—</div><small id="formCoords"></small>
       </div>
+
+      <div class="modal-category-tabs" role="tablist" aria-label="Tipo de Registro">
+        <button type="button" id="tabModoAtivo" class="modal-tab-btn active" role="tab" aria-selected="true" data-mode="ATIVO">
+          <span>⚙️</span> Ativo / Ocorrência
+        </button>
+        <button type="button" id="tabModoAS" class="modal-tab-btn" role="tab" aria-selected="false" data-mode="AUTORIZACAO_SERVICO">
+          <span>📝</span> Autorização para Serviço (AS)
+        </button>
+      </div>
+
       <form id="formRegistro">
         <input id="editModeS237" type="hidden" value="NOVO">
         <input id="editIdRegistroS237" type="hidden" value="">
         <input id="editProtocoloS237" type="hidden" value="">
-        <div class="grid"><label>Tipo *<select id="tipo" required></select></label><label>Finalidade *<select
-              id="finalidade" required></select></label><label class="span2">Título *<input id="titulo" maxlength="180"
-              required placeholder="Ex.: Placa Direcional — Rua José Avelino"></label><label class="span2">Texto da
-            sinalização<textarea id="textoSinalizacao" rows="3"
-              placeholder="Ex.: Praça de Alimentação →"></textarea></label><label class="span2">Descrição *<textarea
-              id="descricao" rows="4" required
-              placeholder="Descreva a peça, posição e características observadas"></textarea></label><label>Material<select
-              id="material"></select></label><label>Dimensões<input id="dimensoes"
-              placeholder="Ex.: 80 x 30 cm"></label><label>Cor predominante<input id="cor"
-              placeholder="Ex.: Azul"></label><label>Fixação<input id="fixacao"
-              list="fixacaoListaS269D2" autocomplete="off" placeholder="Ex.: Suspensa no teto"
-              aria-describedby="fixacaoHintS269D2"><datalist id="fixacaoListaS269D2"></datalist><small
-              id="fixacaoHintS269D2" class="field-hint-s269d2">Texto livre enquanto não houver opções ativas no catálogo.</small></label><label>Estado de conservação *<select id="estadoConservacao"
-              required></select></label><label>Condição *<select id="condicao"
-              required></select></label><label>Responsável *<select id="responsavel"
-              required></select></label><label>Data de instalação<input id="dataInstalacao"
-              type="date"></label><label>Validade<input id="validade" type="date"></label></div>
-        <div class="checks">
-          <div class="photo-section">
-            <label class="photo-label">Fotos</label>
-            <div class="photo-actions">
-              <label class="photo-btn">
-                <input id="fotoInput" type="file" accept="image/*" capture="environment" multiple hidden>
-                Adicionar foto
-              </label>
-              <span id="fotoResumo" class="photo-summary">Nenhuma foto</span>
+        <input id="categoriaRegistro" type="hidden" value="ATIVO">
+
+        <div id="blocoAtivoCampos">
+          <div class="grid"><label>Tipo / Subsistema *<select id="tipo" required></select></label><label>Frente Operacional *<select
+                id="finalidade" required></select></label><label class="span2">Título / Identificação *<input id="titulo" maxlength="180"
+                required placeholder="Ex.: Chiller 02 — Central de Água Gelada"></label><label>Código do Patrimônio / TAG<input id="codigoPatrimonio" maxlength="60"
+                placeholder="Ex.: TAG-CAG-02 / PAT-0842"></label><label>Identificação Complementar<input id="textoSinalizacao"
+                placeholder="Ex.: QGBT-01 Subsolo / Plaqueta"></label><label class="span2">Descrição / Diagnóstico *<textarea
+                id="descricao" rows="4" required
+                placeholder="Descreva o equipamento, estado de conservação, anomalia observada ou intervenção necessária"></textarea></label><label>Material / Componente<select
+                id="material"></select></label><label>Dimensões / Capacidade<input id="dimensoes"
+                placeholder="Ex.: 50 TR / 220V"></label><label>Cor / Padrão visual<input id="cor"
+                placeholder="Ex.: Cinza"></label><label>Instalação / Fixação<input id="fixacao"
+                list="fixacaoListaS269D2" autocomplete="off" placeholder="Ex.: Piso técnico / Suporte metálico"
+                aria-describedby="fixacaoHintS269D2"><datalist id="fixacaoListaS269D2"></datalist><small
+                id="fixacaoHintS269D2" class="field-hint-s269d2">Texto livre enquanto não houver opções ativas no catálogo.</small></label><label>Estado de conservação *<select id="estadoConservacao"
+                required></select></label><label>Condição / Status Operacional *<select id="condicao"
+                required></select></label><label>Equipe / Responsável *<select id="responsavel"
+                required></select></label><label>Data de instalação / Manutenção<input id="dataInstalacao"
+                type="date"></label><label>Validade / Próx. Preventiva<input id="validade" type="date"></label></div>
+          <div class="checks">
+            <div class="photo-section">
+              <label class="photo-label">Fotos</label>
+              <div class="photo-actions">
+                <label class="photo-btn">
+                  <input id="fotoInput" type="file" accept="image/*" capture="environment" multiple hidden>
+                  Adicionar foto
+                </label>
+                <span id="fotoResumo" class="photo-summary">Nenhuma foto</span>
+              </div>
+              <div id="fotoPreview" class="photo-preview"></div>
             </div>
-            <div id="fotoPreview" class="photo-preview"></div>
+            <label><input id="iluminada" type="checkbox"> Iluminada</label><label><input id="duplaFace" type="checkbox">
+              Dupla face</label><label><input id="qrCode" type="checkbox"> Possui QR Code</label><label><input
+                id="braille" type="checkbox"> Possui Braille</label><label><input id="pictograma" type="checkbox"> Possui
+              pictograma</label>
           </div>
-          <label><input id="iluminada" type="checkbox"> Iluminada</label><label><input id="duplaFace" type="checkbox">
-            Dupla face</label><label><input id="qrCode" type="checkbox"> Possui QR Code</label><label><input
-              id="braille" type="checkbox"> Possui Braille</label><label><input id="pictograma" type="checkbox"> Possui
-            pictograma</label>
         </div>
-        <div class="form-actions"><button type="button" id="cancelarForm">Cancelar</button><button type="submit"
-            class="primary" id="salvar">Salvar registro</button></div>
+
+        <div id="blocoASCampos" hidden>
+          <div class="as-header-card">
+            <div class="as-header-title">
+              <span class="as-header-icon">📄</span>
+              <div>
+                <h3>SOLICITAÇÃO DE AUTORIZAÇÃO DE SERVIÇOS</h3>
+                <p>Central de Operações • Centro Fashion Fortaleza (CEOP)</p>
+              </div>
+            </div>
+            <div id="asLojistaVinculoBadge" class="as-lojista-vinculo-badge" hidden>
+              <span class="vinculo-icon">🏪</span>
+              <span id="asLojistaVinculoTexto">Vinculado ao Espaço Comercial</span>
+            </div>
+          </div>
+
+          <!-- SOLICITANTE -->
+          <div class="as-form-card">
+            <div class="as-card-section-title">
+              <span>👤</span> DADOS DO SOLICITANTE
+            </div>
+
+            <div class="as-field-group">
+              <label for="asNomeTitular" class="as-label">
+                <span class="as-req">*</span> NOME COMPLETO DO SOLICITANTE <span class="as-info-icon" title="Obrigatório em letras maiúsculas">ℹ️</span>
+              </label>
+              <span class="as-sublabel">INSIRA O NOME COMPLETO DO SOLICITANTE UTILIZANDO LETRAS MAIÚSCULAS</span>
+              <input id="asNomeTitular" type="text" class="as-input as-uppercase" placeholder="Digite aqui ..." maxlength="120" autocomplete="name">
+              <small class="as-hint-quote">&gt; deve ser informado</small>
+            </div>
+
+            <div class="as-field-row-2">
+              <div class="as-field-group">
+                <label for="asContatoTitular" class="as-label">
+                  <span class="as-req">*</span> CONTATO (TELEFONE) DO SOLICITANTE
+                </label>
+                <div class="as-phone-wrap">
+                  <span class="as-phone-flag">🇧🇷</span>
+                  <input id="asContatoTitular" type="tel" class="as-input as-phone-input" placeholder="(99) 99999-9999" maxlength="20" autocomplete="tel">
+                </div>
+              </div>
+
+              <div class="as-field-group">
+                <label for="asCpfTitular" class="as-label">
+                  <span class="as-req">*</span> CPF DO SOLICITANTE <span class="as-info-icon" title="Somente números">ℹ️</span>
+                </label>
+                <span class="as-sublabel">INSIRA O CPF DO SOLICITANTE UTILIZANDO SOMENTE NÚMEROS</span>
+                <input id="asCpfTitular" type="text" class="as-input" placeholder="Digite aqui ..." maxlength="14" inputmode="numeric">
+              </div>
+            </div>
+
+            <div class="as-field-group">
+              <label for="asEmailSolicitante" class="as-label">
+                <span class="as-req">*</span> E-MAIL DO SOLICITANTE <span class="as-info-icon" title="E-mail para envio da autorização">ℹ️</span>
+              </label>
+              <span class="as-sublabel">INSIRA O E-MAIL DO SOLICITANTE</span>
+              <div class="as-email-notice">
+                <span>⚠️</span> OBS: A APROVAÇÃO DA AUTORIZAÇÃO SERÁ ENVIADO PARA ESTE E-MAIL
+              </div>
+              <input id="asEmailSolicitante" type="email" class="as-input" placeholder="Digite aqui ..." maxlength="120" autocomplete="email">
+            </div>
+          </div>
+
+          <!-- HORÁRIOS & DATAS -->
+          <div class="as-form-card">
+            <div class="as-card-section-title">
+              <span>⏰</span> HORÁRIOS E DATAS DE REALIZAÇÃO
+            </div>
+
+            <div class="as-field-group">
+              <label class="as-label"><span class="as-req">*</span> HORARIO DE REALIZAÇÃO DO SERVIÇO</label>
+              <div class="as-options-pills" id="asHorarioServicoOpcoes">
+                <label class="as-pill-option">
+                  <input type="radio" name="asHorarioServico" value="07:00 AS 09:00" checked>
+                  <span>07:00 AS 09:00</span>
+                </label>
+                <label class="as-pill-option">
+                  <input type="radio" name="asHorarioServico" value="19:00 AS 00:00">
+                  <span>19:00 AS 00:00</span>
+                </label>
+                <label class="as-pill-option">
+                  <input type="radio" name="asHorarioServico" value="07:00 AS 19:00">
+                  <span>07:00 AS 19:00</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="as-field-group">
+              <label class="as-label">HORARIO DE REALIZAÇÃO DO SERVIÇO ÀS SEGUNDAS-FEIRAS</label>
+              <div class="as-options-pills" id="asHorarioSegundaOpcoes">
+                <label class="as-pill-option">
+                  <input type="radio" name="asHorarioSegunda" value="(SEGUNDA-FEIRA 08:00 AS 17:00)">
+                  <span>(SEGUNDA-FEIRA 08:00 AS 17:00)</span>
+                </label>
+                <label class="as-pill-option">
+                  <input type="radio" name="asHorarioSegunda" value="(SEGUNDA-FEIRA 08:00 AS 00:00)">
+                  <span>(SEGUNDA-FEIRA 08:00 AS 00:00)</span>
+                </label>
+                <label class="as-pill-option as-pill-clear">
+                  <input type="radio" name="asHorarioSegunda" value="NÃO SE APLICA" checked>
+                  <span>Não se aplica</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="as-field-row-2">
+              <div class="as-field-group">
+                <label for="asDataInicio" class="as-label">
+                  <span class="as-req">*</span> DATA DE INICIO DO SERVIÇO <span class="as-info-icon" title="Início da validade">ℹ️</span>
+                </label>
+                <span class="as-sublabel">INSIRA A DATA E HORA DE INICIO DO SERVIÇO PARA DEFINIÇÃO DA VALIDADE DA AUTORIZAÇÃO</span>
+                <div class="as-date-wrap">
+                  <input id="asDataInicio" type="date" class="as-input">
+                  <span class="as-date-icon">📅</span>
+                </div>
+              </div>
+
+              <div class="as-field-group">
+                <label for="asDataFim" class="as-label">
+                  <span class="as-req">*</span> DATA DE FINALIZAÇÃO DO SERVIÇO <span class="as-info-icon" title="Fim da validade">ℹ️</span>
+                </label>
+                <span class="as-sublabel">INSIRA A DATA E HORA DE FINALIZAÇÃO DO SERVIÇO PARA DEFINIÇÃO DA VALIDADE DA AUTORIZAÇÃO</span>
+                <div class="as-date-wrap">
+                  <input id="asDataFim" type="date" class="as-input">
+                  <span class="as-date-icon">📅</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LOCALIZAÇÃO -->
+          <div class="as-form-card">
+            <div class="as-card-section-title">
+              <span>📍</span> LOCALIZAÇÃO DO ESPAÇO / BOX
+            </div>
+
+            <div class="as-field-group">
+              <label for="asSetor" class="as-label"><span class="as-req">*</span> SETOR</label>
+              <input id="asSetor" type="text" class="as-input as-readonly-sector" value="BRANCO" readonly>
+            </div>
+
+            <div class="as-field-group">
+              <label for="asRua" class="as-label">
+                <span class="as-req">*</span> RUA SETOR BRANCO <span class="as-info-icon" title="Rua de localização da loja/box">ℹ️</span>
+              </label>
+              <span class="as-sublabel">SELECIONE A RUA EM QUE SEU LOJA ESTÁ LOCALIZADO</span>
+              <input id="asRua" type="text" class="as-input" placeholder="AV. PRES. CASTELO BRANCO" value="AV. PRES. CASTELO BRANCO">
+            </div>
+
+            <div class="as-field-group">
+              <label for="asBox" class="as-label">
+                NÚMERO DO BOX/LOJA <span class="as-info-icon" title="Identificação do box">ℹ️</span>
+              </label>
+              <span class="as-sublabel">INSIRA O NUMERO EM QUE SEU BOX ESTÁ LOCALIZADO</span>
+              <input id="asBox" type="text" class="as-input" placeholder="Digite aqui ...">
+            </div>
+          </div>
+
+          <!-- TIPO DE SOLICITAÇÃO -->
+          <div class="as-form-card">
+            <div class="as-card-section-title">
+              <span>⚙️</span> TIPO DE SOLICITAÇÃO DE AUTORIZAÇÃO
+            </div>
+
+            <div class="as-field-group">
+              <label class="as-label">
+                <span class="as-req">*</span> TIPO DE SOLICITAÇÃO DE AUTORIZAÇÃO <span class="as-info-icon" title="Selecione o tipo de autorização">ℹ️</span>
+              </label>
+              <span class="as-sublabel">SELECIONE O TIPO DE AUTORIZAÇÃO A SER SOLICITADA</span>
+
+              <div class="as-type-cards" id="asTipoSolicitacaoCards">
+                <label class="as-type-card" data-type="RETIRADA DE PERTENCES">
+                  <input type="radio" name="asTipoRadio" value="RETIRADA DE PERTENCES">
+                  <span class="as-type-indicator">○</span>
+                  <div class="as-type-card-content">
+                    <strong>RETIRADA DE PERTENCES</strong>
+                    <small>Mobiliário, manequins, mercadorias e equipamentos</small>
+                  </div>
+                </label>
+
+                <label class="as-type-card" data-type="OBRA DE MELHORIA">
+                  <input type="radio" name="asTipoRadio" value="OBRA DE MELHORIA">
+                  <span class="as-type-indicator">○</span>
+                  <div class="as-type-card-content">
+                    <strong>OBRA DE MELHORIA</strong>
+                    <small>Estrutura, revestimentos e instalações</small>
+                  </div>
+                </label>
+
+                <label class="as-type-card" data-type="ORGANIZAÇÃO E LIMPEZA">
+                  <input type="radio" name="asTipoRadio" value="ORGANIZAÇÃO E LIMPEZA">
+                  <span class="as-type-indicator">○</span>
+                  <div class="as-type-card-content">
+                    <strong>ORGANIZAÇÃO E LIMPEZA</strong>
+                    <small>Serviços de limpeza, pintura pontual e organização</small>
+                  </div>
+                </label>
+              </div>
+
+              <div class="as-clear-selection-wrap">
+                <button type="button" id="btnLimparTipoAS" class="as-btn-link">Limpar opção selecionada</button>
+              </div>
+              <input id="asTipoSolicitacao" type="hidden" value="">
+            </div>
+          </div>
+
+          <!-- RAMIFICAÇÃO CONDICIONAL 1: RETIRADA DE PERTENCES -->
+          <div id="asSecaoRetiradaPertences" class="as-form-card as-branch-card" hidden>
+            <div class="as-card-section-title as-branch-title">
+              <span>📦</span> RETIRADA DE PERTENCES
+            </div>
+
+            <div class="as-field-group">
+              <label class="as-label">ESPECIFICAR ITENS A SEREM RETIRADOS</label>
+              <div class="as-pipefy-options-wrap" id="asItensRetiradaOpcoes">
+                <label class="as-pipefy-check"><input type="checkbox" name="asItensRetirada" value="MOBILIÁRIO"><span class="as-check-square"></span><span>MOBILIÁRIO</span></label>
+                <label class="as-pipefy-check"><input type="checkbox" name="asItensRetirada" value="MANEQUINS"><span class="as-check-square"></span><span>MANEQUINS</span></label>
+                <label class="as-pipefy-check"><input type="checkbox" name="asItensRetirada" value="MERCADORIAS"><span class="as-check-square"></span><span>MERCADORIAS</span></label>
+                <label class="as-pipefy-check"><input type="checkbox" name="asItensRetirada" value="ELETRÔNICOS"><span class="as-check-square"></span><span>ELETRÔNICOS</span></label>
+                <label class="as-pipefy-check"><input type="checkbox" name="asItensRetirada" value="QUIOSQUE"><span class="as-check-square"></span><span>QUIOSQUE</span></label>
+              </div>
+            </div>
+
+            <div class="as-field-group">
+              <label for="asEspecificacaoItens" class="as-label">
+                <span class="as-req">*</span> ESPECIFICAÇÃO DE ITENS <span class="as-info-icon" title="Motivo e itens detalhados">ℹ️</span>
+              </label>
+              <span class="as-sublabel">FORNEÇA DETALHES SOBRE OS PERTENCES E INDIQUE O MOTIVO ESPECÍFICO DA RETIRADA DOS PERTENCES</span>
+              <textarea id="asEspecificacaoItens" rows="3" class="as-textarea" placeholder="Digite aqui ..."></textarea>
+            </div>
+          </div>
+
+          <!-- RAMIFICAÇÃO CONDICIONAL 2: OBRA DE MELHORIA -->
+          <div id="asSecaoObraMelhoria" class="as-form-card as-branch-card" hidden>
+            <div class="as-card-section-title as-branch-title">
+              <span>🏗️</span> OBRAS DE MELHORIA
+            </div>
+
+            <!-- ESTRUTURA -->
+            <div class="as-field-group">
+              <label class="as-label">SERVIÇO A SER REALIZADO - ESTRUTURA</label>
+              <div class="as-pipefy-options-wrap" id="asEstruturaOpcoes">
+                <label class="as-pipefy-radio"><input type="radio" name="asEstruturaRadio" value="MOBILIÁRIO"><span class="as-radio-circle"></span><span>MOBILIÁRIO</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asEstruturaRadio" value="VIDRO"><span class="as-radio-circle"></span><span>VIDRO</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asEstruturaRadio" value="METALÚRGICA"><span class="as-radio-circle"></span><span>METALÚRGICA</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asEstruturaRadio" value="PORTA"><span class="as-radio-circle"></span><span>PORTA</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asEstruturaRadio" value="FACHADA"><span class="as-radio-circle"></span><span>FACHADA</span></label>
+              </div>
+              <div class="as-clear-selection-wrap">
+                <button type="button" class="as-btn-link" id="btnLimparEstrutura">Limpar opção selecionada</button>
+              </div>
+            </div>
+
+            <!-- REVESTIMENTO -->
+            <div class="as-field-group">
+              <label class="as-label">SERVIÇO A SER REALIZADO - REVESTIMENTO</label>
+              <div class="as-pipefy-options-wrap" id="asRevestimentoOpcoes">
+                <label class="as-pipefy-radio"><input type="radio" name="asRevestimentoRadio" value="MADEIRA"><span class="as-radio-circle"></span><span>MADEIRA</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asRevestimentoRadio" value="CERÂMICO (SOMENTE AUTORIZADO PISO VINÍLICO)"><span class="as-radio-circle"></span><span>CERÂMICO (SOMENTE AUTORIZADO PISO VINÍLICO)</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asRevestimentoRadio" value="GESSO"><span class="as-radio-circle"></span><span>GESSO</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asRevestimentoRadio" value="PINTURA"><span class="as-radio-circle"></span><span>PINTURA</span></label>
+              </div>
+              <div class="as-clear-selection-wrap">
+                <button type="button" class="as-btn-link" id="btnLimparRevestimento">Limpar opção selecionada</button>
+              </div>
+            </div>
+
+            <!-- INSTALAÇÕES -->
+            <div class="as-field-group">
+              <label class="as-label">SERVIÇO A SER REALIZADO - INSTALAÇÕES</label>
+              <div class="as-pipefy-options-wrap" id="asInstalacoesOpcoes">
+                <label class="as-pipefy-radio"><input type="radio" name="asInstalacoesRadio" value="ELÉTRICA"><span class="as-radio-circle"></span><span>ELÉTRICA</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asInstalacoesRadio" value="INTERNET" id="radioInstalacaoInternet"><span class="as-radio-circle"></span><span>INTERNET</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asInstalacoesRadio" value="COMUNICAÇÃO VISUAL"><span class="as-radio-circle"></span><span>COMUNICAÇÃO VISUAL</span></label>
+                <label class="as-pipefy-radio"><input type="radio" name="asInstalacoesRadio" value="HS/GÁS"><span class="as-radio-circle"></span><span>HS/GÁS</span></label>
+              </div>
+              <div class="as-clear-selection-wrap">
+                <button type="button" class="as-btn-link" id="btnLimparInstalacoes">Limpar opção selecionada</button>
+              </div>
+            </div>
+
+            <!-- SUB-CONDICIONAL: OPERADORAS DE INTERNET -->
+            <div id="asSecaoEmpresaInternet" class="as-internet-subcard" hidden>
+              <div class="as-field-group">
+                <label class="as-label">
+                  <span class="as-req">*</span> EMPRESA DE INTERNET
+                </label>
+                <div class="as-pipefy-options-wrap" id="asEmpresaInternetOpcoes">
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="CONECTA TELECOM / SIGA FIBRA"><span class="as-radio-circle"></span><span>CONECTA TELECOM / SIGA FIBRA</span></label>
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="IF TECNOLOGIA"><span class="as-radio-circle"></span><span>IF TECNOLOGIA</span></label>
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="ASN TELECOM"><span class="as-radio-circle"></span><span>ASN TELECOM</span></label>
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="MOB TELECOM / GIGA+ FIBRA"><span class="as-radio-circle"></span><span>MOB TELECOM / GIGA+ FIBRA</span></label>
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="BRISANET"><span class="as-radio-circle"></span><span>BRISANET</span></label>
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="TEXNET"><span class="as-radio-circle"></span><span>TEXNET</span></label>
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="SERVNAC"><span class="as-radio-circle"></span><span>SERVNAC</span></label>
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="ATHOS TELECOM"><span class="as-radio-circle"></span><span>ATHOS TELECOM</span></label>
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="IP2"><span class="as-radio-circle"></span><span>IP2</span></label>
+                  <label class="as-pipefy-radio"><input type="radio" name="asEmpresaInternetRadio" value="FIBERNET"><span class="as-radio-circle"></span><span>FIBERNET</span></label>
+                </div>
+                <div class="as-clear-selection-wrap">
+                  <button type="button" class="as-btn-link" id="btnLimparEmpresaInternet">Limpar opção selecionada</button>
+                </div>
+                <input id="asEmpresaInternet" type="hidden" value="NÃO SE APLICA">
+              </div>
+            </div>
+          </div>
+
+          <!-- BLOCO DE PRESTADOR E DETALHAMENTO (Comum a OBRA e ORGANIZAÇÃO/LIMPEZA) -->
+          <div id="asSecaoPrestadorDetalhes" class="as-form-card as-branch-card" hidden>
+            <div class="as-card-section-title as-branch-title">
+              <span>👷</span> DETALHES DO SERVIÇO E PRESTADOR RESPONSÁVEL
+            </div>
+
+            <div class="as-field-group">
+              <label for="asDescricaoServico" class="as-label">
+                <span class="as-req">*</span> DESCRIÇÃO DO SERVIÇO <span class="as-info-icon" title="Descrição clara e precisa">ℹ️</span>
+              </label>
+              <span class="as-sublabel">FORNEÇA DETALHES ESPECÍFICOS SOBRE O SERVIÇO A SER REALIZADO. GARANTA QUE A DESCRIÇÃO SEJA CLARA E PRECISA, FACILITANDO A COMPREENSÃO DO SERVIÇO.</span>
+              <textarea id="asDescricaoServico" rows="3" class="as-textarea" placeholder="Digite aqui ..."></textarea>
+            </div>
+
+            <div class="as-field-group">
+              <label for="asNomePrestador" class="as-label">
+                <span class="as-req">*</span> NOME COMPLETO DO PRESTADOR DE SERVIÇOS <span class="as-info-icon" title="Prestador em letras maiúsculas">ℹ️</span>
+              </label>
+              <span class="as-sublabel">INSIRA O NOME COMPLETO DO PRESTADOR DE SERVIÇOS UTILIZANDO LETRAS MAIÚSCULAS</span>
+              <input id="asNomePrestador" type="text" class="as-input as-uppercase" placeholder="Digite aqui ..." maxlength="120">
+            </div>
+
+            <div class="as-field-row-2">
+              <div class="as-field-group">
+                <label for="asCpfPrestador" class="as-label">
+                  <span class="as-req">*</span> CPF DO PRESTADOR DE SERVIÇOS <span class="as-info-icon" title="Somente números">ℹ️</span>
+                </label>
+                <span class="as-sublabel">INSIRA O CPF DO PRESTADOR DE SERVIÇOS UTILIZANDO SOMENTE NÚMEROS</span>
+                <input id="asCpfPrestador" type="text" class="as-input" placeholder="Digite aqui ..." maxlength="14" inputmode="numeric">
+              </div>
+
+              <div class="as-field-group">
+                <label for="asContatoPrestador" class="as-label">
+                  CONTATO(TELEFONE) DO PRESTADOR DE SERVIÇOS
+                </label>
+                <div class="as-phone-wrap">
+                  <span class="as-phone-flag">🇧🇷</span>
+                  <input id="asContatoPrestador" type="tel" class="as-input as-phone-input" placeholder="(99) 99999-9999" maxlength="20">
+                </div>
+              </div>
+            </div>
+
+            <div class="as-field-group">
+              <label for="asEmailPrestador" class="as-label">
+                E-MAIL DO PRESTADOR DE SERVIÇOS <span class="as-info-icon" title="Aviso para o prestador">ℹ️</span>
+              </label>
+              <span class="as-sublabel">INSIRA O E-MAIL DO PRESTADOR DE SERVIÇOS</span>
+              <div class="as-email-notice">
+                <span>⚠️</span> OBS: A APROVAÇÃO DA AUTORIZAÇÃO TAMBÉM SERÁ ENVIADO PARA ESTE E-MAIL
+              </div>
+              <input id="asEmailPrestador" type="email" class="as-input" placeholder="Digite aqui ..." maxlength="120">
+            </div>
+
+            <div class="as-field-group">
+              <label for="asEmpresaPrestador" class="as-label">
+                EMPRESA <span class="as-info-icon" title="Opcional se pessoa jurídica">ℹ️</span>
+              </label>
+              <span class="as-sublabel">CASO UMA EMPRESA SEJA A EXECUTORA DO SERVIÇO ESTE CAMPO DEVERÁ SER PREENCHIDO, SE NÃO ESTE CAMPO DEVERÁ SER IGNORADO</span>
+              <input id="asEmpresaPrestador" type="text" class="as-input" placeholder="Digite aqui ...">
+            </div>
+
+            <div class="as-field-group">
+              <label for="asEquipe" class="as-label">
+                EQUIPE <span class="as-info-icon" title="Ajudantes e integrantes">ℹ️</span>
+              </label>
+              <span class="as-sublabel">NOME COMPLETO E CPF DOS INTEGRANTES DA EQUIPE QUE REALIZARÁ O SERVIÇO NO BOX/LOJA. CASO NÃO TENHA EQUIPE ALÉM DO PRESTADOR DE SERVIÇOS ESTE CAMPO DEVERÁ SER IGNORADO.</span>
+              <textarea id="asEquipe" rows="2" class="as-textarea" placeholder="Digite aqui ..."></textarea>
+            </div>
+          </div>
+
+          <!-- TERMOS LGPD E NORMAS -->
+          <div class="as-form-card as-lgpd-card">
+            <div class="as-card-section-title">
+              <span>📜</span> LEI GERAL DE PROTEÇÃO DE DADOS (LGPD) & NORMAS
+            </div>
+
+            <div class="as-lgpd-text">
+              <p>
+                <strong>Lei Geral de Proteção de Dados - (Lei no. 13.709/2018):</strong> O solicitante, ao requerer Autorizações de Serviços, autoriza expressamente a Central de Operações do Centro Fashion Fortaleza, na qualidade de Controlador, a realizar a coleta e tratamento de seus dados pessoais, sensíveis ou não, nos termos dos artigos 7 e 8 da legislação mencionada, para os fins específicos de fiel cumprimento da presente Autorização de Serviços, Tratamento de Não Conformidades e Notificações Extra Judiciais, bem como para uso estatístico, os quais serão armazenados pelo período necessário.
+              </p>
+              <a href="#" target="_blank" rel="noopener noreferrer" class="as-link-privacidade">
+                Conheça Nossa Política de Privacidade
+              </a>
+            </div>
+
+            <div class="as-field-group" style="margin-top:14px;">
+              <label class="as-label"><span class="as-req">*</span> Concordo com os termos supracitados</label>
+              <label class="as-pipefy-radio">
+                <input id="asTermosLgpd" type="checkbox">
+                <span class="as-radio-circle"></span>
+                <span style="font-size:12px;color:#334155;line-height:1.4;">Li e concordo com os termos e condições supracitados relacionados a Lei Geral de Proteção de Dados - (Lei no 13.709/2018)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- BOTÃO NOVA SOLICITAÇÃO (Pipefy Style) -->
+          <div class="as-nova-solicitacao-bar">
+            <button type="button" id="btnNovaSolicitacaoForm" class="as-btn-pipefy-blue">
+              Nova solicitação
+            </button>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="cancelarForm">Cancelar</button>
+          <button type="submit" class="primary" id="salvar">Salvar registro</button>
+        </div>
       </form>
     </section>
 
@@ -1880,6 +2378,405 @@
     </section>
 
 
+    <!-- =====================================================
+         GESTÃO DE LOJISTAS E ESPAÇOS (BASE MESTRE DESACOPLADA)
+         ===================================================== -->
+    <section id="lojistasPanel" class="offline-panel lojistas-panel" hidden aria-hidden="true" aria-labelledby="lojistasTitulo">
+      <div class="offline-box lojistas-box">
+        <div class="offline-head lojistas-head">
+          <div>
+            <small id="lojistasStatusBadge">Base Mestre Conectada</small>
+            <h2 id="lojistasTitulo">Gestão de Lojistas e Espaços</h2>
+            <p>Cadastro Mestre corporativo de lojas, boxes, quiosques e mídias (Hub &amp; Spoke Desacoplado).</p>
+          </div>
+          <button id="fecharLojistasPanel" class="icon-btn" type="button" aria-label="Fechar Gestão de Lojistas">×</button>
+        </div>
+
+        <div id="lojistasKpis" class="lojistas-kpis" aria-live="polite">
+          <article class="kpi-card">
+            <strong id="kpiTotalLojistas">—</strong>
+            <span>Total de Espaços</span>
+          </article>
+          <article class="kpi-card kpi-ocupada">
+            <strong id="kpiOcupadasLojistas">—</strong>
+            <span>Ocupadas</span>
+          </article>
+          <article class="kpi-card kpi-disponivel">
+            <strong id="kpiDisponiveisLojistas">—</strong>
+            <span>Disponíveis</span>
+          </article>
+          <article class="kpi-card kpi-bloqueada">
+            <strong id="kpiBloqueadasLojistas">—</strong>
+            <span>Bloqueadas / Inativas</span>
+          </article>
+          <article class="kpi-card kpi-taxa">
+            <strong id="kpiTaxaOcupacaoLojistas">—</strong>
+            <span>Taxa de Ocupação</span>
+          </article>
+        </div>
+
+        <div class="lojistas-toolbar">
+          <label class="lojistas-search">
+            <span>Pesquisar Espaço / Lojista</span>
+            <input id="buscaLojistaInput" type="search" autocomplete="off" placeholder="LUC, Lojista, Nome Fantasia, Contrato, Mix...">
+          </label>
+
+          <label>
+            <span>Setor</span>
+            <select id="filtroSetorLojista">
+              <option value="">Todos os setores</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Tipo</span>
+            <select id="filtroTipoLojista">
+              <option value="">Todos os tipos</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Disponibilidade</span>
+            <select id="filtroDispLojista">
+              <option value="">Todas</option>
+              <option value="OCUPADA">Ocupada</option>
+              <option value="DISPONIVEL">Disponível</option>
+              <option value="BLOQUEADA">Bloqueada</option>
+              <option value="RESERVADA">Reservada</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Status</span>
+            <select id="filtroStatusLojista">
+              <option value="Ativa">Ativa</option>
+              <option value="Inativa">Inativa</option>
+              <option value="">Todas</option>
+            </select>
+          </label>
+
+          <div class="lojistas-actions-row">
+            <button id="btnNovoLojista" type="button" class="primary">
+              <span>＋</span> Novo Espaço
+            </button>
+            <button id="btnImportarLojistas" type="button" class="secondary" title="Carga em massa da planilha anexada">
+              <span>⚡</span> Carga em Massa
+            </button>
+            <button id="btnAtualizarLojistas" type="button" class="ghost" title="Atualizar dados da planilha mestre">
+              <span>↻</span> Atualizar
+            </button>
+          </div>
+        </div>
+
+        <div id="lojistasStatusMsg" class="lojistas-status-msg" hidden></div>
+
+        <div class="lojistas-table-wrap">
+          <table class="lojistas-table">
+            <thead>
+              <tr>
+                <th>LUC</th>
+                <th>Setor</th>
+                <th>Tipo / Subtipo</th>
+                <th>Lojista (Titular)</th>
+                <th>Nome Fantasia / Contrato</th>
+                <th>Disponibilidade</th>
+                <th>Mix</th>
+                <th>Área</th>
+                <th>Rota</th>
+                <th style="text-align:center;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaLojistasCorpo">
+              <tr>
+                <td colspan="10" style="text-align:center; padding:30px; color:#6B7280;">Carregando dados dos lojistas...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="lojistas-paginacao">
+          <span id="lojistasPaginacaoInfo">Exibindo 0 registros</span>
+          <div class="lojistas-paginacao-botoes">
+            <button id="btnPagAnteriorLojista" type="button" disabled>‹ Anterior</button>
+            <span id="lojistasPaginaAtual">1 / 1</span>
+            <button id="btnPagProximaLojista" type="button" disabled>Próxima ›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Central de Gestão de Autorizações de Serviço (AS) -->
+    <section id="gestaoAsPanel" class="offline-panel lojistas-panel gestao-as-panel" hidden aria-hidden="true" aria-labelledby="gestaoAsTitulo">
+      <div class="offline-box lojistas-box gestao-as-box">
+        <div class="offline-head lojistas-head gestao-as-head">
+          <div>
+            <small id="gestaoAsStatusBadge">Central de Serviços &amp; Ocorrências</small>
+            <h2 id="gestaoAsTitulo">Gestão de Autorizações de Serviço (AS)</h2>
+            <p>Controle unificado de solicitações, serviços em corredores, ruas e lojas (em aberto, pendentes e concluídas).</p>
+          </div>
+          <button id="fecharGestaoAsPanel" class="icon-btn" type="button" aria-label="Fechar Gestão de AS">×</button>
+        </div>
+
+        <div id="gestaoAsKpis" class="lojistas-kpis gestao-as-kpis" aria-live="polite">
+          <article class="kpi-card kpi-card-as-filter" data-filtro-kpi="" title="Clique para ver todas as solicitações">
+            <strong id="kpiTotalAs">—</strong>
+            <span>Total de Solicitações</span>
+          </article>
+          <article class="kpi-card kpi-ocupada kpi-card-as-filter" data-filtro-kpi="ABERTAS" title="Clique para filtrar em aberto / autorizadas">
+            <strong id="kpiAbertasAs">—</strong>
+            <span>Em Aberto / Autorizadas</span>
+          </article>
+          <article class="kpi-card kpi-bloqueada kpi-card-as-filter" data-filtro-kpi="PENDENTES" title="Clique para filtrar pendentes / em andamento">
+            <strong id="kpiPendentesAs">—</strong>
+            <span>Pendentes / Em Andamento</span>
+          </article>
+          <article class="kpi-card kpi-disponivel kpi-card-as-filter" data-filtro-kpi="CONCLUIDAS" title="Clique para filtrar concluídas">
+            <strong id="kpiConcluidasAs">—</strong>
+            <span>Concluídas / Finalizadas</span>
+          </article>
+        </div>
+
+        <div class="lojistas-toolbar gestao-as-toolbar">
+          <label class="lojistas-search gestao-as-search">
+            <span>Pesquisar Solicitação</span>
+            <input id="buscaAsInput" type="search" autocomplete="off" placeholder="Protocolo, Loja, Rua, Solicitante, Prestador, Descrição...">
+          </label>
+
+          <label>
+            <span>Status</span>
+            <select id="filtroStatusAs">
+              <option value="">Todos os status</option>
+              <option value="ABERTAS">Em Aberto / Autorizadas</option>
+              <option value="PENDENTES">Pendentes / Em Andamento</option>
+              <option value="CONCLUIDAS">Concluídas / Finalizadas</option>
+              <option value="CANCELADAS">Canceladas</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Local</span>
+            <select id="filtroLocalAs">
+              <option value="">Todos os locais</option>
+              <option value="RUA">Apenas Ruas e Corredores</option>
+              <option value="LOJA">Apenas Lojas / Boxes</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Setor</span>
+            <select id="filtroSetorAs">
+              <option value="">Todos os setores</option>
+              <option value="AZUL">Setor Azul</option>
+              <option value="VERDE">Setor Verde</option>
+              <option value="AMARELO">Setor Amarelo</option>
+              <option value="BRANCO">Setor Branco</option>
+              <option value="VERMELHO">Setor Vermelho</option>
+              <option value="ROXO">Setor Roxo</option>
+            </select>
+          </label>
+
+          <div class="lojistas-actions-row">
+            <button id="btnNovaAsPainel" type="button" class="primary" title="Emitir nova Autorização de Serviço">
+              <span>＋</span> Nova AS
+            </button>
+            <button id="btnAtualizarAs" type="button" class="ghost" title="Atualizar dados do servidor">
+              <span>↻</span> Atualizar
+            </button>
+          </div>
+        </div>
+
+        <div id="gestaoAsStatusMsg" class="lojistas-status-msg" hidden></div>
+
+        <div class="lojistas-table-wrap gestao-as-table-wrap">
+          <table class="lojistas-table gestao-as-table">
+            <thead>
+              <tr>
+                <th style="min-width:130px;">Protocolo</th>
+                <th style="min-width:150px;">Localização / Espaço</th>
+                <th style="min-width:140px;">Solicitante / Loja</th>
+                <th style="min-width:140px;">Prestador / Empresa</th>
+                <th style="min-width:140px;">Serviço</th>
+                <th style="min-width:120px;">Período / Data</th>
+                <th style="min-width:100px; text-align:center;">Status</th>
+                <th style="min-width:260px; text-align:center;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaGestaoAsCorpo">
+              <tr>
+                <td colspan="8" style="text-align:center; padding:30px; color:#6B7280;">Carregando Autorizações de Serviço...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="lojistas-paginacao gestao-as-paginacao">
+          <span id="gestaoAsPaginacaoInfo">Exibindo 0 solicitações</span>
+          <div class="lojistas-paginacao-botoes">
+            <button id="btnPagAnteriorAs" type="button" disabled>‹ Anterior</button>
+            <span id="gestaoAsPaginaAtual">1 / 1</span>
+            <button id="btnPagProximaAs" type="button" disabled>Próxima ›</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modal de Cadastro e Edição de Lojista -->
+    <div id="lojistaModal" class="modal-overlay lojista-modal-overlay" hidden aria-hidden="true">
+      <div class="modal lojista-modal-box">
+        <div class="modal-head">
+          <div>
+            <small id="lojistaModalSubtitulo">Cadastro Mestre</small>
+            <h3 id="lojistaModalTitulo">Novo Espaço / Lojista</h3>
+          </div>
+          <div class="modal-head-right-actions">
+            <button id="btnEmitirAsLojistaTopo" type="button" class="btn-emitir-as-topo" title="Emitir Autorização de Serviço (AS) para este espaço">
+              <span>📝</span> Emitir AS
+            </button>
+            <button id="fecharModalLojista" type="button" class="icon-btn" aria-label="Fechar modal">×</button>
+          </div>
+        </div>
+
+        <div class="lojista-modal-tabs" role="tablist" aria-label="Navegação do Espaço Comercial">
+          <button id="tabLojistaDados" type="button" class="lojista-tab-btn active" role="tab" aria-selected="true" onclick="alternarAbaLojistaModal('DADOS')">
+            <span>🏪</span> Dados Cadastrais
+          </button>
+          <button id="tabLojistaHistorico" type="button" class="lojista-tab-btn" role="tab" aria-selected="false" onclick="alternarAbaLojistaModal('HISTORICO')">
+            <span>📋</span> Histórico de Ocorrências & AS
+            <span id="lojistaHistoricoBadgeCount" class="lojista-tab-badge" hidden>0</span>
+          </button>
+        </div>
+
+        <div id="viewLojistaDados" class="lojista-tab-view active">
+        <form id="formLojista">
+          <input type="hidden" id="lojistaModoOperacao" value="NOVO">
+          <div class="lojista-form-grid">
+            <label>
+              Código do Espaço (LUC) *
+              <input id="formLojistaLuc" maxlength="30" required placeholder="Ex.: PR2002, AVALN2121">
+            </label>
+            <label>
+              Setor *
+              <select id="formLojistaSetor" required>
+                <option value="SETOR AMARELO">SETOR AMARELO</option>
+                <option value="SETOR AZUL">SETOR AZUL</option>
+                <option value="SETOR BRANCO">SETOR BRANCO</option>
+                <option value="SETOR DIGITAL">SETOR DIGITAL</option>
+                <option value="SETOR ROXO">SETOR ROXO</option>
+                <option value="SETOR VERDE">SETOR VERDE</option>
+                <option value="SETOR VERMELHO">SETOR VERMELHO</option>
+              </select>
+            </label>
+            <label class="span2">
+              Rua / Corredor (Nome Completo)
+              <input id="formLojistaRua" maxlength="100" placeholder="Ex.: Rua Barão do Rio Branco, Avenida Imperador">
+            </label>
+            <label>
+              Tipo de Espaço *
+              <select id="formLojistaTipo" required>
+                <option value="BOX">BOX</option>
+                <option value="LOJA">LOJA</option>
+                <option value="ALIMENTACAO">ALIMENTACAO</option>
+                <option value="QUIOSQUE">QUIOSQUE</option>
+                <option value="MIDIA">MIDIA</option>
+              </select>
+            </label>
+            <label>
+              Subtipo
+              <input id="formLojistaSubtipo" maxlength="50" placeholder="Ex.: Box, Minibox, Superbox, Loja Satélite">
+            </label>
+            <label>
+              Número do Contrato
+              <input id="formLojistaContrato" maxlength="40" placeholder="Ex.: 1429045">
+            </label>
+            <label>
+              Disponibilidade *
+              <select id="formLojistaDisponibilidade" required>
+                <option value="Ocupada">Ocupada</option>
+                <option value="Disponível">Disponível</option>
+                <option value="Bloqueada">Bloqueada</option>
+                <option value="Reservada">Reservada</option>
+              </select>
+            </label>
+            <label class="span2">
+              Nome do Lojista (Titular / Responsável)
+              <input id="formLojistaTitular" maxlength="120" placeholder="Nome completo do lojista ou locatário">
+            </label>
+            <label class="span2">
+              Nome Fantasia da Operação
+              <input id="formLojistaFantasia" maxlength="120" placeholder="Ex.: Rotativa Jeans, Restaurante do Mall">
+            </label>
+            <label>
+              Situação Cadastral (Status) *
+              <select id="formLojistaStatus" required>
+                <option value="Ativa">Ativa</option>
+                <option value="Inativa">Inativa</option>
+              </select>
+            </label>
+            <label>
+              Área do Espaço (m²)
+              <input id="formLojistaArea" placeholder="Ex.: 2,4">
+            </label>
+            <label class="span2">
+              Mix Comercial / Ramo de Atividade
+              <input id="formLojistaMix" maxlength="100" placeholder="Ex.: Moda Feminina, Camisaria, Jeans Wear">
+            </label>
+            <label>
+              Valor Tabela Adesão
+              <input id="formLojistaValorAdesao" placeholder="Ex.: R$ 25.000,00">
+            </label>
+            <label>
+              Valor Tabela Manutenção
+              <input id="formLojistaValorManutencao" placeholder="Ex.: R$ 155,00">
+            </label>
+            <label>
+              Data de Criação
+              <input id="formLojistaDataCriacao" placeholder="DD/MM/AAAA">
+            </label>
+            <label>
+              Rota Operacional
+              <input id="formLojistaRota" placeholder="Ex.: ROTA 05, ROTA 08">
+            </label>
+          </div>
+
+          <div class="form-actions lojista-modal-actions" style="margin-top:18px;">
+            <div class="form-actions-left">
+              <button id="btnEmitirAsLojista" type="button" class="btn-emitir-as-lojista" title="Emitir Autorização de Serviço (AS) para este espaço">
+                <span>📝</span> Emitir AS para este Box
+              </button>
+            </div>
+            <div class="form-actions-right">
+              <button id="cancelarLojistaBtn" type="button">Cancelar</button>
+              <button id="salvarLojistaBtn" type="submit" class="primary">Salvar Lojista</button>
+            </div>
+          </div>
+        </form>
+        </div>
+
+        <div id="viewLojistaHistorico" class="lojista-tab-view" hidden>
+          <div class="lojista-historico-header">
+            <div class="lojista-hist-filtros">
+              <button id="filtroHistTodos" type="button" class="hist-chip active" data-filtro="TODOS">Todos (<span id="countHistTodos">0</span>)</button>
+              <button id="filtroHistAS" type="button" class="hist-chip chip-as" data-filtro="AUTORIZACAO_SERVICO">📝 AS (<span id="countHistAS">0</span>)</button>
+              <button id="filtroHistOcorrencias" type="button" class="hist-chip chip-oco" data-filtro="ATIVO">⚙️ Ocorrências (<span id="countHistOco">0</span>)</button>
+            </div>
+            <div class="lojista-hist-acoes">
+              <button id="btnNovaAsHistView" type="button" class="btn-nova-as-hist" title="Emitir nova Autorização de Serviço para este espaço">
+                <span>📝</span> Emitir AS
+              </button>
+              <button id="btnNovaOcoHistView" type="button" class="btn-nova-oco-hist" title="Cadastrar nova ocorrência operacional para este espaço">
+                <span>⚙️</span> Nova Ocorrência
+              </button>
+            </div>
+          </div>
+
+          <div id="listaHistoricoLojista" class="lojista-historico-lista">
+            <div class="lojista-hist-loading">Carregando histórico do espaço...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
     <!-- S26.10-C — Torres / Núcleos verticais -->
     <section id="torresPanelS2610C" class="offline-panel" hidden aria-hidden="true">
       <div class="offline-box torres-box-s2610c">
@@ -2744,7 +3641,6 @@
     <section class="gate"><strong>Gate S22.5.16:</strong> em celular, valide cabeçalho compacto; abra Fila com itens
       pendentes e confirme que os registros/fotos aparecem e sincronizam.</section>
   </main>
-  <?!= include('scripts'); ?>
   <div id="fotoModalS225" class="modal-overlay gallery-overlay-s225" hidden aria-hidden="true">
     <section class="gallery-modal-s225" role="dialog" aria-modal="true" aria-labelledby="fotoTituloS225">
       <header class="gallery-head-s225">
@@ -2770,6 +3666,133 @@
     </section>
   </div>
 
+  <!-- MODAL PÓS-SALVAMENTO: SUCESSO E AÇÃO DE IMPRESSÃO / SALVAMENTO EM PDF -->
+  <div id="modalAsSucessoImpressao" class="modal-overlay as-success-overlay" hidden aria-hidden="true">
+    <div class="as-success-dialog" role="dialog" aria-modal="true" aria-labelledby="asSucessoTitulo">
+      <div class="as-success-icon-wrap">
+        <span class="as-success-icon">✅</span>
+      </div>
+      <small class="as-success-eyebrow">CEOP • CENTRO FASHION FORTALEZA</small>
+      <h2 id="asSucessoTitulo">Autorização Salva com Sucesso!</h2>
+      <p class="as-success-desc">A Autorização para Execução de Serviços foi registrada e salva no sistema.</p>
+
+      <div class="as-success-protocol-box">
+        <span>PROTOCOLO OFICIAL</span>
+        <strong id="asSucessoProtocolo">SIG-AS-00000000</strong>
+        <small id="asSucessoResumoLocal">—</small>
+      </div>
+
+      <div class="as-success-actions">
+        <button type="button" id="btnSucessoImprimirAs" class="primary as-btn-success-print">
+          🖨️ Imprimir / Salvar em PDF
+        </button>
+        <div class="as-success-secondary-row">
+          <button type="button" id="btnSucessoNovaAs" class="as-btn-secondary">
+            ➕ Nova Solicitação
+          </button>
+          <button type="button" id="btnSucessoFecharAs" class="as-btn-secondary">
+            Concluir
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE PRÉ-VISUALIZAÇÃO DA IMPRESSÃO / PDF -->
+  <div id="modalAsPreviewImpressao" class="modal-overlay as-preview-overlay" hidden aria-hidden="true">
+    <div class="as-preview-modal" role="dialog" aria-modal="true" aria-labelledby="asPreviewTitulo">
+      <header class="as-preview-header">
+        <div class="as-preview-header-info">
+          <h3 id="asPreviewTitulo">📄 Visualização da Autorização para Serviço</h3>
+          <p>Para guardar o documento em seu computador, escolha o destino <strong>Salvar como PDF</strong> na tela de impressão.</p>
+        </div>
+        <div class="as-preview-header-actions">
+          <button type="button" id="btnPreviewEnviarEmailAs" style="background:#7C3AED; color:#FFF; border:none; padding:8px 14px; border-radius:6px; font-weight:700; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; margin-right:6px;">
+            ✉️ Enviar por E-mail
+          </button>
+          <button type="button" id="btnExecutarImpressaoAs" class="primary as-btn-print-now">
+            🖨️ Imprimir / Salvar como PDF
+          </button>
+          <button type="button" id="btnFecharPreviewAs" class="as-btn-close-preview" aria-label="Fechar">
+            ✕
+          </button>
+        </div>
+      </header>
+      <div class="as-preview-body">
+        <div id="asPreviewPaperStage" class="as-preview-paper-stage">
+          <!-- O conteúdo renderizado do documento será inserido aqui dinamicamente -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMAÇÃO E ENVIO DE AS POR E-MAIL -->
+  <div id="modalAsEnviarEmail" class="modal-overlay as-email-overlay" hidden aria-hidden="true">
+    <div class="as-email-dialog" role="dialog" aria-modal="true" aria-labelledby="asEmailModalTitulo">
+      <div class="as-email-icon-wrap">
+        <span class="as-email-icon">✉️</span>
+      </div>
+      <small class="as-email-eyebrow">CEOP • CENTRAL DE OPERAÇÕES</small>
+      <h2 id="asEmailModalTitulo">Enviar Autorização por E-mail</h2>
+      <p class="as-email-desc">O documento oficial da Autorização de Serviço será enviado com formatação corporativa e o <strong>PDF oficial anexado</strong> para impressão ou arquivamento.</p>
+
+      <div class="as-email-info-card">
+        <div class="as-email-info-row">
+          <span class="as-email-label">Protocolo:</span>
+          <strong id="asEmailProtocolo">—</strong>
+        </div>
+        <div class="as-email-info-row">
+          <span class="as-email-label">Solicitante:</span>
+          <span id="asEmailSolicitante" style="font-weight:600; color:#0F172A;">—</span>
+        </div>
+        <div class="as-email-info-row">
+          <span class="as-email-label">Local / Espaço:</span>
+          <span id="asEmailLocal" style="font-weight:600; color:#1E293B;">—</span>
+        </div>
+        <div class="as-email-info-row">
+          <span class="as-email-label">Tipo de Serviço:</span>
+          <span id="asEmailServico" style="font-weight:700; color:#D97706;">—</span>
+        </div>
+        <div class="as-email-info-row" style="border-top:1px dashed #CBD5E1; padding-top:6px; margin-top:6px;">
+          <span class="as-email-label">Anexo Oficial:</span>
+          <span style="font-weight:700; color:#047857; display:flex; align-items:center; gap:4px;">📎 Documento em PDF (A4)</span>
+        </div>
+      </div>
+
+      <form id="formAsEnviarEmail" onsubmit="return false;" style="margin-top:14px; text-align:left;">
+        <label for="asEmailDestinatarioInput" style="display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:5px;">
+          E-mail do Solicitante / Destinatário *
+        </label>
+        <input type="email" id="asEmailDestinatarioInput" required placeholder="exemplo@email.com" style="width:100%; box-sizing:border-box; padding:9px 12px; border:1.5px solid #CBD5E1; border-radius:6px; font-size:13px; font-family:inherit; outline:none; transition:border 0.2s;" />
+        <small style="display:block; color:#64748B; font-size:11px; margin-top:4px;">
+          Você pode alterar ou informar o endereço desejado para recebimento.
+        </small>
+
+        <div style="margin-top:10px;">
+          <label for="asEmailCcInput" style="display:block; font-size:11px; font-weight:600; color:#475569; margin-bottom:4px;">
+            Cópia (Cc) — Opcional
+          </label>
+          <input type="email" id="asEmailCcInput" placeholder="copia@email.com (opcional)" style="width:100%; box-sizing:border-box; padding:7px 10px; border:1px solid #E2E8F0; border-radius:6px; font-size:12px; font-family:inherit; outline:none;" />
+        </div>
+
+        <div class="as-email-dialog-actions" style="margin-top:18px; display:flex; gap:10px; justify-content:flex-end;">
+          <button type="button" id="btnCancelarEnviarEmailAs" style="background:#F1F5F9; color:#475569; border:1px solid #CBD5E1; padding:8px 16px; border-radius:6px; font-weight:700; font-size:12px; cursor:pointer;">
+            Cancelar
+          </button>
+          <button type="submit" id="btnConfirmarEnviarEmailAs" style="background:#7C3AED; color:#FFF; border:none; padding:8px 18px; border-radius:6px; font-weight:700; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            <span id="asBtnEmailIcon">✉️</span> <span id="asBtnEmailTexto">Enviar Agora</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONTAINER OFICIAL PARA IMPRESSÃO (Renderizado em A4 via @media print) -->
+  <div id="asDocumentoImpressao" class="as-documento-impressao" hidden>
+    <!-- Template populado dinamicamente antes de window.print() -->
+  </div>
+
+  <?!= include('scripts'); ?>
 </body>
 
 </html>

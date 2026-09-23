@@ -2178,7 +2178,7 @@ function appObterCamadasNivelS267B1(idNivel) {
       x: ['X_NORMALIZADO', 'CENTRO_X', 'X_CENTRO', 'X'],
       y: ['Y_NORMALIZADO', 'CENTRO_Y', 'Y_CENTRO', 'Y'],
       label: ['NUMERO_LOJA', 'LUC', 'NOME_LOJA'],
-      limitePorMapa: 1500
+      limitePorMapa: 5000
     }
   ];
 
@@ -2207,6 +2207,27 @@ function appObterCamadasNivelS267B1(idNivel) {
         return String(r.ID_MAPA_SETOR || '').trim() === p.mapa && s267B1Ativo_(r.ATIVO);
       }).slice(0, def.limitePorMapa);
 
+      if (def.chave === 'lojas' && p.mapa === 'MAP-CFF-N3-ROXO' && typeof obterDefinicaoBoxesIlhaCentralRoxo_ === 'function') {
+        const temIlha = origem.some(function (r) { return String(r.LUC || '').trim() === 'R24DM3241'; });
+        if (!temIlha) {
+          const defs = obterDefinicaoBoxesIlhaCentralRoxo_();
+          defs.forEach(function (d) {
+            origem.push({
+              ID_LOJA_MAPA: d.id,
+              ID_MAPA_SETOR: d.mapa,
+              NUMERO_LOJA: d.numero,
+              NOME_LOJA: d.nome,
+              LUC: d.luc,
+              ID_CORREDOR: d.corredor,
+              LADO_CORREDOR: d.lado,
+              X_NORMALIZADO: d.x,
+              Y_NORMALIZADO: d.y,
+              ATIVO: 'SIM'
+            });
+          });
+        }
+      }
+
       origem.forEach(function (r) {
         const x = s267B1PrimeiroNumero_(r, def.x);
         const y = s267B1PrimeiroNumero_(r, def.y);
@@ -2225,11 +2246,38 @@ function appObterCamadasNivelS267B1(idNivel) {
         if (unicos[chave]) return;
         unicos[chave] = true;
 
+        let luc = s267B1PrimeiroTexto_(r, ['LUC', 'CODIGO_LUC', 'ID_ESPACO', 'ID_LOJA']);
+        const numeroLoja = s267B1PrimeiroTexto_(r, ['NUMERO_LOJA', 'NUMERO']);
+        const nomeLoja = s267B1PrimeiroTexto_(r, ['NOME_LOJA', 'NOME']);
+        let corredor = s267B1PrimeiroTexto_(r, ['ID_CORREDOR', 'CORREDOR', 'RUA']);
+        let siglaRua = '';
+
+        if (def.chave === 'lojas') {
+          if (!corredor && typeof localizarCorredorS3_ === 'function' && Number.isFinite(x) && Number.isFinite(y)) {
+            try {
+              const c = localizarCorredorS3_(p.mapa, x, y);
+              if (c) corredor = c.nome || c.idCorredor || '';
+            } catch (_) {}
+          }
+          if (typeof extrairSiglaRuaS3_ === 'function') {
+            siglaRua = extrairSiglaRuaS3_(corredor);
+          }
+          if ((!luc || luc === numeroLoja) && siglaRua && numeroLoja) {
+            luc = siglaRua + numeroLoja;
+          }
+        }
+
         projetados.push({
           id: idEntidade,
           x: q.x,
           y: q.y,
-          label: label,
+          label: label || numeroLoja || luc,
+          luc: luc,
+          numeroLoja: numeroLoja,
+          nomeLoja: nomeLoja,
+          corredor: corredor,
+          rua: corredor,
+          siglaRua: siglaRua,
           mapaOrigem: p.mapa,
           nivelDestino: nivel,
           calibracaoId: p.id,

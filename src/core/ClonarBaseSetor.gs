@@ -366,3 +366,182 @@ function testarProvisionamentoManual() {
   Logger.log(JSON.stringify(resultado, null, 2));
   return resultado;
 }
+
+/**
+ * Menu interativo da planilha para inicializar a planilha em branco a partir da Matriz oficial.
+ */
+function menuInicializarPlanilhaPermissionario() {
+  var ui = SpreadsheetApp.getUi();
+  var emailAdmin = '';
+  try {
+    emailAdmin = Session.getActiveUser().getEmail();
+  } catch (_) {}
+
+  var textoConfirmacao =
+    'Deseja importar toda a estrutura, abas e cartografia da Base Matriz oficial para esta planilha?\n\n' +
+    '• Todas as 43 abas do shopping (Cartografia, Torres, Lojistas, Catálogos);\n' +
+    '• Pastas organizadas criadas automaticamente no Google Drive (Fotos, Backups, Relatórios);\n' +
+    '• Cadastro do Administrador na aba USUARIOS' + (emailAdmin ? ' (' + emailAdmin + ')' : '') + ';\n' +
+    '• Base pronta para uso imediato no Web App.\n\n' +
+    'Deseja iniciar agora?';
+
+  var resp = ui.alert('⚡ Inicializar Base do Permissionário', textoConfirmacao, ui.ButtonSet.YES_NO);
+  if (resp !== ui.Button.YES) return;
+
+  if (!emailAdmin) {
+    var promptEmail = ui.prompt('E-mail do Administrador', 'Digite o seu e-mail corporativo para acesso:', ui.ButtonSet.OK_CANCEL);
+    if (promptEmail.getSelectedButton() !== ui.Button.OK) return;
+    emailAdmin = promptEmail.getResponseText().trim();
+  }
+
+  try {
+    var res = inicializarPlanilhaAPartirDoTemplate_('Permissionário', emailAdmin);
+    ui.alert(
+      '✅ Inicialização Concluída com Sucesso!',
+      'A base do Permissionário foi configurada com êxito:\n\n' +
+      '• Abas importadas: ' + res.abasImportadas + '\n' +
+      '• Administrador cadastrado: ' + res.admin + '\n' +
+      '• Pasta no Drive: ' + res.pastaRaizNome + '\n\n' +
+      'Tudo pronto! Você já pode abrir ou recarregar o link do Web App.',
+      ui.ButtonSet.OK
+    );
+  } catch (err) {
+    ui.alert('Erro ao Inicializar', 'Ocorreu um erro durante a inicialização:\n\n' + (err?.message || err), ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Função direta para execução manual a partir do editor Apps Script.
+ */
+function executarInicializacaoPermissionarioManual() {
+  var res = inicializarPlanilhaAPartirDoTemplate_('Permissionário');
+  Logger.log(JSON.stringify(res, null, 2));
+  return res;
+}
+
+/**
+ * Motor de importação e estruturação da planilha ativa a partir do template matriz.
+ * @param {string} nomeSetor - Nome do setor.
+ * @param {string} [emailAdminOpcional] - E-mail opcional do administrador.
+ * @return {Object} Resumo da operação.
+ */
+function inicializarPlanilhaAPartirDoTemplate_(nomeSetor, emailAdminOpcional) {
+  var setorNormalizado = (nomeSetor || 'Permissionário').trim();
+  var ssAtiva = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ssAtiva) {
+    throw new Error('Nenhuma planilha ativa vinculada ao projeto Apps Script.');
+  }
+
+  var templateSsId = PROVISIONING_CONFIG.TEMPLATE_SPREADSHEET_ID;
+  var ssTemplate = SpreadsheetApp.openById(templateSsId);
+  if (!ssTemplate) {
+    throw new Error('Não foi possível abrir a planilha modelo matriz (ID: ' + templateSsId + ').');
+  }
+
+  var abasTemplate = ssTemplate.getSheets();
+  var emailAdmin = emailAdminOpcional || (Session.getActiveUser() ? Session.getActiveUser().getEmail() : '') || 'admin@empresa.com';
+
+  // 1. Criar estrutura de pastas no Drive para o novo setor
+  var pastaDestinoPai = DriveApp.getRootFolder();
+  try {
+    var arquivoSs = DriveApp.getFileById(ssAtiva.getId());
+    var pais = arquivoSs.getParents();
+    if (pais.hasNext()) pastaDestinoPai = pais.next();
+  } catch (_) {}
+
+  var nomePastaRaiz = 'Sinalização - ' + setorNormalizado;
+  var pastasExistentes = pastaDestinoPai.getFoldersByName(nomePastaRaiz);
+  var novaPastaRaiz = pastasExistentes.hasNext() ? pastasExistentes.next() : pastaDestinoPai.createFolder(nomePastaRaiz);
+
+  function getOuCriarSubpasta_(pastaPai, nome) {
+    var subs = pastaPai.getFoldersByName(nome);
+    return subs.hasNext() ? subs.next() : pastaPai.createFolder(nome);
+  }
+
+  var pastaFotos = getOuCriarSubpasta_(novaPastaRaiz, 'Fotos');
+  var pastaBackups = getOuCriarSubpasta_(novaPastaRaiz, 'Backups');
+  var pastaRelatorios = getOuCriarSubpasta_(novaPastaRaiz, 'Relatórios');
+
+  // 2. Copiar as abas da matriz
+  var abasImportadas = 0;
+  var abasPuladas = 0;
+
+  for (var i = 0; i < abasTemplate.length; i++) {
+    var shOrigem = abasTemplate[i];
+    var nomeAba = shOrigem.getName();
+    if (nomeAba === 'LOG_CONSULTAS') continue; // Descontinuada
+
+    var jaExiste = ssAtiva.getSheetByName(nomeAba);
+    if (!jaExiste) {
+      var novaAba = shOrigem.copyTo(ssAtiva);
+      novaAba.setName(nomeAba);
+      abasImportadas++;
+    } else {
+      abasPuladas++;
+    }
+  }
+
+  // 3. Remover abas iniciais em branco geradas pelo sheets.new (ex: "Página1", "Sheet1")
+  var todasAbas = ssAtiva.getSheets();
+  for (var k = 0; k < todasAbas.length; k++) {
+    var s = todasAbas[k];
+    var sNome = s.getName();
+    if (/^(Página\s*\d+|Sheet\s*\d+)$/i.test(sNome) && s.getLastRow() <= 1 && todasAbas.length > 1) {
+      try { ssAtiva.deleteSheet(s); } catch (_) {}
+    }
+  }
+
+  // 4. Configurar a aba CONFIG
+  var shConfig = ssAtiva.getSheetByName('CONFIG');
+  if (shConfig) {
+    atualizarOuInserirConfig_(shConfig, 'DRIVE_ROOT_FOLDER_ID', novaPastaRaiz.getId(), 'Pasta raiz do setor no Google Drive');
+    atualizarOuInserirConfig_(shConfig, 'FOTOS_REGISTROS_FOLDER_ID', pastaFotos.getId(), 'Pasta de fotos do setor no Google Drive');
+    atualizarOuInserirConfig_(shConfig, 'BACKUPS_FOLDER_ID', pastaBackups.getId(), 'Pasta de backups do setor no Google Drive');
+    atualizarOuInserirConfig_(shConfig, 'SLIDES_RELATORIOS_FOLDER_ID', pastaRelatorios.getId(), 'Pasta de relatórios do setor');
+    atualizarOuInserirConfig_(shConfig, 'SETOR_NOME', setorNormalizado, 'Nome do setor vinculado');
+    atualizarOuInserirConfig_(shConfig, 'APP_NOME', 'Sinalização - ' + setorNormalizado, 'Identificador da aplicação');
+    atualizarOuInserirConfig_(shConfig, 'PROVISIONADO_EM', Utilities.formatDate(new Date(), PROVISIONING_CONFIG.TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX"), 'Data/hora de provisionamento desta base');
+    atualizarOuInserirConfig_(shConfig, 'PROVISIONADO_POR', emailAdmin, 'E-mail do executor do provisionamento');
+    atualizarOuInserirConfig_(shConfig, 'TEMPLATE_ORIGEM_SPREADSHEET_ID', templateSsId, 'ID da planilha base utilizada como template');
+  }
+
+  // 5. Configurar a aba USUARIOS
+  var shUsuarios = ssAtiva.getSheetByName('USUARIOS');
+  if (shUsuarios) {
+    var uLastRow = shUsuarios.getLastRow();
+    var uLastCol = shUsuarios.getLastColumn();
+    if (uLastRow > 1 && uLastCol > 0) {
+      shUsuarios.getRange(2, 1, uLastRow - 1, uLastCol).clearContent();
+    }
+    configurarUsuarioAdminInicial_(shUsuarios, emailAdmin, setorNormalizado);
+  }
+
+  // 6. Sanitizar abas operacionais (remover dados de teste, preservar cabeçalhos)
+  var abasOperacionais = [
+    'REGISTROS', 'REGISTRO_FOTOS', 'REGISTRO_HISTORICO',
+    'PENDENCIAS', 'AUDITORIA', 'BACKUPS',
+    'ALERTAS_OPERACIONAIS', 'NOTIFICACOES_ENVIO', 'SESSOES_USUARIO'
+  ];
+  for (var j = 0; j < abasOperacionais.length; j++) {
+    var shOp = ssAtiva.getSheetByName(abasOperacionais[j]);
+    if (shOp) {
+      var opLastRow = shOp.getLastRow();
+      var opLastCol = shOp.getLastColumn();
+      if (opLastRow > 1 && opLastCol > 0) {
+        shOp.getRange(2, 1, opLastRow - 1, opLastCol).clearContent();
+      }
+    }
+  }
+
+  SpreadsheetApp.flush();
+
+  return {
+    ok: true,
+    setor: setorNormalizado,
+    admin: emailAdmin,
+    abasImportadas: abasImportadas,
+    abasPuladas: abasPuladas,
+    pastaRaizNome: novaPastaRaiz.getName(),
+    pastaRaizId: novaPastaRaiz.getId()
+  };
+}

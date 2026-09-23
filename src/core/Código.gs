@@ -69,6 +69,8 @@ function onOpen() {
   // Auditoria S26.10 — menu atualizado: itens S26.7 encerrados removidos;
   // 'setupAtual' (setupS267) não representa mais a fase corrente.
   SpreadsheetApp.getUi().createMenu('CEOP — Operações')
+    .addItem('⚡ Inicializar Base do Permissionário (Copiar Matriz)', 'menuInicializarPlanilhaPermissionario')
+    .addSeparator()
     .addItem('Diagnóstico da release S26.10', 'diagnosticoS2610F2')
     .addSeparator()
     .addItem('Garantir colunas de Autorização de Serviço (AS)', 'menuGarantirColunasCeopAs')

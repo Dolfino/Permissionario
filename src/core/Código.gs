@@ -152,16 +152,7 @@ function doPost(e) {
     if (action === 'promover_lote') {
       const ids = payload.ids || [];
       const user = payload.usuario || 'SISTEMA_M2B';
-      const resultados = [];
-      for (let i = 0; i < ids.length; i++) {
-        const idStg = ids[i];
-        try {
-          const r = promoverRegistroStaging(idStg, user);
-          resultados.push({ idStaging: idStg, idEspaco: r.idEspaco, status: 'OK', jaPromovido: r.jaPromovido });
-        } catch (errProm) {
-          resultados.push({ idStaging: idStg, status: 'ERRO', erro: String(errProm?.message || errProm) });
-        }
-      }
+      const resultados = promoverLoteStagingEmBloco(ids, user);
       return ContentService.createTextOutput(JSON.stringify({ sucesso: true, promovidos: resultados }, null, 2)).setMimeType(ContentService.MimeType.JSON);
     }
 

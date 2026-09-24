@@ -31,11 +31,13 @@ function obterAbaEspacosStaging_() {
 }
 
 /**
- * Gera o próximo ID de staging de forma atômica soberana via ScriptLock e ScriptProperties.
- * Formato: STG-000001
+ * Gera múltiplos IDs de staging de forma atômica e soberana via ScriptLock e ScriptProperties.
+ * @param {number} [quantidade=1]
+ * @returns {Array<string>} Lista de IDs gerados (ex: ['STG-000001', ...])
  * @private
  */
-function gerarProximoIdStagingSeguro_() {
+function gerarProximosIdsStagingSeguro_(quantidade) {
+  const qtd = Math.max(1, parseInt(quantidade || 1, 10));
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(ESPACOS_CONFIG.LOCK_TIMEOUT_MS)) {
     throw new Error('CONCORRENCIA_LOCK_TIMEOUT: Não foi possível obter ScriptLock para ID_STAGING.');
@@ -61,12 +63,25 @@ function gerarProximoIdStagingSeguro_() {
       }
     }
 
-    seqAtual += 1;
+    const ids = [];
+    for (let k = 0; k < qtd; k++) {
+      seqAtual += 1;
+      ids.push(ESPACOS_CONFIG.PREFIXO_ID_STAGING + String(seqAtual).padStart(ESPACOS_CONFIG.PAD_DIGITOS_ID, '0'));
+    }
     props.setProperty(ESPACOS_CONFIG.CHAVE_PROP_SEQUENCIAL_STAGING, String(seqAtual));
-    return ESPACOS_CONFIG.PREFIXO_ID_STAGING + String(seqAtual).padStart(ESPACOS_CONFIG.PAD_DIGITOS_ID, '0');
+    return ids;
   } finally {
     lock.releaseLock();
   }
+}
+
+/**
+ * Gera o próximo ID de staging de forma atômica soberana via ScriptLock e ScriptProperties.
+ * Formato: STG-000001
+ * @private
+ */
+function gerarProximoIdStagingSeguro_() {
+  return gerarProximosIdsStagingSeguro_(1)[0];
 }
 
 /**
@@ -179,6 +194,17 @@ function inserirOuAtualizarStaging(registros, idSnapshotOrigem, fonteOrigem, ver
   let atualizados = 0;
   let inalterados = 0;
 
+  // Pré-reserva de IDs para registros inéditos em uma única operação atômica
+  let qtdNovos = 0;
+  for (let idx = 0; idx < registros.length; idx++) {
+    const r = registros[idx];
+    const idReg = r.ID_REGISTRO_ORIGEM || gerarIdRegistroOrigemDeterminostico_(r);
+    const chMig = `${snapshot}::${idReg}`;
+    if (!mapaExistentes.has(chMig)) qtdNovos++;
+  }
+  const idsReservados = qtdNovos > 0 ? gerarProximosIdsStagingSeguro_(qtdNovos) : [];
+  let cursorIdStg = 0;
+
   for (let idx = 0; idx < registros.length; idx++) {
     const r = registros[idx];
     const idRegistroOrigem = r.ID_REGISTRO_ORIGEM || gerarIdRegistroOrigemDeterminostico_(r);
@@ -231,8 +257,8 @@ function inserirOuAtualizarStaging(registros, idSnapshotOrigem, fonteOrigem, ver
         atualizados++;
       }
     } else {
-      // Registro inédito: gera novo ID de staging atômico
-      const idStaging = gerarProximoIdStagingSeguro_();
+      // Registro inédito: utiliza ID pré-reservado
+      const idStaging = idsReservados[cursorIdStg++];
       const grauConfianca = r.GRAU_CONFIANCA || 'DETERMINISTICO';
       const confiancaIdentidade = r.CONFIANCA_IDENTIDADE || grauConfianca;
       const confiancaAtributos = r.CONFIANCA_ATRIBUTOS || 'DECLARADO';
@@ -620,3 +646,240 @@ function obterEstatisticasStaging() {
     totalPromovidos: totalPromovidos
   };
 }
+
+/**
+ * Promove múltiplos registros de staging em bloco com alta performance.
+ * Reduz centenas de roundtrips a poucas operações em lote (setValues),
+ * preservando exatamente as mesmas regras de integridade, Exactly-Once, Ledger e ScriptLock.
+ * @param {Array<string>} idsStaging Lista de IDs de staging a promover
+ * @param {string} [usuario] Usuário operador
+ * @returns {Array<Object>} Lista de resultados por ID [{ idStaging, idEspaco, status, jaPromovido, recuperadoDeFalha }]
+ */
+function promoverLoteStagingEmBloco(idsStaging, usuario) {
+  if (!Array.isArray(idsStaging) || idsStaging.length === 0) return [];
+  const user = String(usuario || Session.getActiveUser().getEmail() || 'SISTEMA_M2B').trim();
+  const agora = new Date().toISOString();
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(ESPACOS_CONFIG.LOCK_TIMEOUT_MS)) {
+    throw new Error('CONCORRENCIA_LOCK_TIMEOUT: Não foi possível obter ScriptLock para promover lote em bloco.');
+  }
+
+  try {
+    const shStg = obterAbaEspacosStaging_();
+    const lastRowStg = shStg.getLastRow();
+    if (lastRowStg <= 1) throw new Error('STAGING_VAZIO: Nenhuma linha em staging.');
+
+    const dadosStg = shStg.getRange(2, 1, lastRowStg - 1, ESPACOS_STAGING_HEADERS.length).getValues();
+    const mapaStgPorId = new Map();
+    const colIdStg = ESPACOS_STAGING_HEADERS.indexOf('ID_STAGING');
+    for (let r = 0; r < dadosStg.length; r++) {
+      const id = String(dadosStg[r][colIdStg] || '').trim();
+      if (id) mapaStgPorId.set(id, { rowIdx: r, rowNum: r + 2, data: dadosStg[r], modificado: false });
+    }
+
+    const shEsp = obterAbaEspacos_();
+    const lastRowEsp = shEsp.getLastRow();
+    const mapaEspPorChaveOrigem = new Map();
+    if (lastRowEsp > 1) {
+      const dadosEsp = shEsp.getRange(2, 1, lastRowEsp - 1, ESPACOS_HEADERS.length).getValues();
+      const colChaveOrigemEsp = ESPACOS_HEADERS.indexOf('CHAVE_MIGRACAO_ORIGEM');
+      const colIdEsp = ESPACOS_HEADERS.indexOf('ID_ESPACO');
+      for (let r = 0; r < dadosEsp.length; r++) {
+        const ch = String(dadosEsp[r][colChaveOrigemEsp] || '').trim();
+        if (ch) mapaEspPorChaveOrigem.set(ch, String(dadosEsp[r][colIdEsp] || '').trim());
+      }
+    }
+
+    const itensParaPromover = [];
+    const resultados = [];
+    const getValRow = (row, colName) => row[ESPACOS_STAGING_HEADERS.indexOf(colName)];
+
+    for (let i = 0; i < idsStaging.length; i++) {
+      const idStg = idsStaging[i];
+      if (!mapaStgPorId.has(idStg)) {
+        resultados.push({ idStaging: idStg, status: 'ERRO', erro: 'Registro não encontrado em staging: ' + idStg });
+        continue;
+      }
+
+      const stgEntry = mapaStgPorId.get(idStg);
+      const row = stgEntry.data;
+      const statusAtual = String(getValRow(row, 'STATUS_MIGRACAO') || '').trim();
+      const idEspacoExistente = String(getValRow(row, 'ID_ESPACO_GERADO') || '').trim();
+      const chaveMig = String(getValRow(row, 'CHAVE_MIGRACAO_ORIGEM') || '').trim();
+
+      // Tier 1: Já promovido
+      if (statusAtual === 'PROMOVIDO' && idEspacoExistente !== '') {
+        resultados.push({ idStaging: idStg, idEspaco: idEspacoExistente, status: 'OK', jaPromovido: true, recuperadoDeFalha: false });
+        continue;
+      }
+
+      // Tier 2: Crash recovery
+      if (chaveMig && mapaEspPorChaveOrigem.has(chaveMig)) {
+        const idRecuperado = mapaEspPorChaveOrigem.get(chaveMig);
+        row[ESPACOS_STAGING_HEADERS.indexOf('ID_ESPACO_GERADO')] = idRecuperado;
+        row[ESPACOS_STAGING_HEADERS.indexOf('STATUS_MIGRACAO')] = 'PROMOVIDO';
+        row[ESPACOS_STAGING_HEADERS.indexOf('PROCESSADO_EM')] = agora;
+        row[ESPACOS_STAGING_HEADERS.indexOf('PROCESSADO_POR')] = user;
+        stgEntry.modificado = true;
+
+        resultados.push({ idStaging: idStg, idEspaco: idRecuperado, status: 'OK', jaPromovido: true, recuperadoDeFalha: true });
+        continue;
+      }
+
+      itensParaPromover.push({ idStaging: idStg, stgEntry: stgEntry });
+    }
+
+    // Se houver novos para promover
+    if (itensParaPromover.length > 0) {
+      const props = PropertiesService.getScriptProperties();
+      let seqEsp = parseInt(props.getProperty(ESPACOS_CONFIG.CHAVE_PROP_SEQUENCIAL_ESPACO) || '0', 10);
+      const maxEsp = obterMaxIdExistenteEspacos_();
+      if (seqEsp < maxEsp) seqEsp = maxEsp;
+
+      let seqIde = parseInt(props.getProperty(ESPACOS_CONFIG.CHAVE_PROP_SEQUENCIAL_IDENTIFICADOR) || '0', 10);
+      const maxIde = obterMaxIdExistenteIdentificadores_();
+      if (seqIde < maxIde) seqIde = maxIde;
+
+      const novasLinhasEspacos = [];
+      const novasLinhasIdentificadores = [];
+      const novasLinhasLedger = [];
+      const pinosAtualizar = new Map();
+
+      for (let k = 0; k < itensParaPromover.length; k++) {
+        const item = itensParaPromover[k];
+        const stgEntry = item.stgEntry;
+        const row = stgEntry.data;
+
+        seqEsp += 1;
+        const idEspaco = ESPACOS_CONFIG.PREFIXO_ID_ESPACO + String(seqEsp).padStart(ESPACOS_CONFIG.PAD_DIGITOS_ID, '0');
+
+        seqIde += 1;
+        const idIdentificador = ESPACOS_CONFIG.PREFIXO_ID_IDENTIFICADOR + String(seqIde).padStart(ESPACOS_CONFIG.PAD_DIGITOS_ID, '0');
+
+        const luc = String(getValRow(row, 'LUC_LEGADO') || '').trim();
+        const setor = String(getValRow(row, 'SETOR_LEGADO') || '').trim();
+        const rua = String(getValRow(row, 'RUA_LEGADA') || '').trim();
+        const numero = String(getValRow(row, 'NUMERO_LEGADO') || '').trim();
+        const tipoLegado = String(getValRow(row, 'TIPO_LEGADO') || '').trim();
+        const subtipoLegado = String(getValRow(row, 'SUBTIPO_LEGADO') || '').trim();
+        const idPino = String(getValRow(row, 'ID_LOJA_MAPA') || '').trim();
+        const grauConfianca = String(getValRow(row, 'GRAU_CONFIANCA') || 'DETERMINISTICO').trim();
+        const confiancaIdentidade = String(getValRow(row, 'CONFIANCA_IDENTIDADE') || grauConfianca).trim();
+        const confiancaAtributos = String(getValRow(row, 'CONFIANCA_ATRIBUTOS') || 'DECLARADO').trim();
+        const confiancaTipologia = String(getValRow(row, 'CONFIANCA_TIPOLOGIA') || 'NORMALIZADO').trim();
+        const chaveMig = String(getValRow(row, 'CHAVE_MIGRACAO_ORIGEM') || '').trim();
+
+        let tipoEspacoFisico = 'BOX';
+        const tipoUpper = tipoLegado.toUpperCase();
+        if (tipoUpper.includes('QUIOSQUE')) tipoEspacoFisico = 'QUIOSQUE';
+        else if (tipoUpper.includes('LOJA')) tipoEspacoFisico = 'LOJA';
+        else if (tipoUpper.includes('MINIBOX')) tipoEspacoFisico = 'MINIBOX';
+        else if (tipoUpper.includes('STAND')) tipoEspacoFisico = 'STAND_MALL';
+        else if (tipoUpper.includes('DOCA')) tipoEspacoFisico = 'DOCA';
+        else if (tipoUpper.includes('EVENTO')) tipoEspacoFisico = 'AREA_ABERTA';
+
+        novasLinhasEspacos.push([
+          idEspaco,
+          luc,
+          setor.toUpperCase(),
+          rua,
+          numero,
+          'COMERCIAL',
+          'SIM',
+          tipoEspacoFisico,
+          subtipoLegado || tipoEspacoFisico,
+          tipoLegado,
+          subtipoLegado,
+          'ATIVO',
+          'MIGRACAO_LEGADO_2026',
+          grauConfianca,
+          confiancaIdentidade,
+          confiancaAtributos,
+          confiancaTipologia,
+          chaveMig,
+          agora,
+          '',
+          agora,
+          user,
+          'Migrado do staging ' + item.idStaging + (idPino ? ' [Pino: ' + idPino + ']' : '')
+        ]);
+
+        if (luc) {
+          novasLinhasIdentificadores.push([
+            idIdentificador,
+            idEspaco,
+            'LUC',
+            luc,
+            agora,
+            '',
+            'SIM',
+            'SIM',
+            'MIGRACAO_LEGADO_2026',
+            agora,
+            user,
+            'Identificador principal migrado'
+          ]);
+        }
+
+        novasLinhasLedger.push([
+          String(getValRow(row, 'ID_SNAPSHOT_ORIGEM') || ESPACOS_CONFIG.SNAPSHOT_ORIGEM_PADRAO).trim(),
+          String(getValRow(row, 'ID_REGISTRO_ORIGEM') || '').trim(),
+          chaveMig,
+          item.idStaging,
+          idEspaco,
+          luc,
+          setor,
+          String(getValRow(row, 'HASH_ORIGEM') || '').trim(),
+          String(getValRow(row, 'VERSAO_MIGRACAO') || ESPACOS_CONFIG.VERSAO_MIGRACAO).trim(),
+          agora,
+          user
+        ]);
+
+        if (idPino) {
+          pinosAtualizar.set(idPino, idEspaco);
+        }
+
+        row[ESPACOS_STAGING_HEADERS.indexOf('ID_ESPACO_GERADO')] = idEspaco;
+        row[ESPACOS_STAGING_HEADERS.indexOf('STATUS_MIGRACAO')] = 'PROMOVIDO';
+        row[ESPACOS_STAGING_HEADERS.indexOf('PROCESSADO_EM')] = agora;
+        row[ESPACOS_STAGING_HEADERS.indexOf('PROCESSADO_POR')] = user;
+        stgEntry.modificado = true;
+
+        resultados.push({ idStaging: item.idStaging, idEspaco: idEspaco, status: 'OK', jaPromovido: false, recuperadoDeFalha: false });
+      }
+
+      props.setProperty(ESPACOS_CONFIG.CHAVE_PROP_SEQUENCIAL_ESPACO, String(seqEsp));
+      props.setProperty(ESPACOS_CONFIG.CHAVE_PROP_SEQUENCIAL_IDENTIFICADOR, String(seqIde));
+
+      if (novasLinhasEspacos.length > 0) {
+        shEsp.getRange(shEsp.getLastRow() + 1, 1, novasLinhasEspacos.length, ESPACOS_HEADERS.length).setValues(novasLinhasEspacos);
+      }
+
+      if (novasLinhasIdentificadores.length > 0) {
+        const shIde = obterAbaEspacoIdentificadores_();
+        shIde.getRange(shIde.getLastRow() + 1, 1, novasLinhasIdentificadores.length, ESPACO_IDENTIFICADORES_HEADERS.length).setValues(novasLinhasIdentificadores);
+      }
+
+      if (novasLinhasLedger.length > 0) {
+        const shLed = obterAbaEspacosLedger_();
+        shLed.getRange(shLed.getLastRow() + 1, 1, novasLinhasLedger.length, ESPACOS_LEDGER_HEADERS.length).setValues(novasLinhasLedger);
+      }
+
+      if (pinosAtualizar.size > 0 && typeof vincularEspacosAPinosMapaEmBloco_ === 'function') {
+        vincularEspacosAPinosMapaEmBloco_(pinosAtualizar);
+      }
+    }
+
+    // Salva linhas modificadas no staging
+    const temModificados = Array.from(mapaStgPorId.values()).some(e => e.modificado);
+    if (temModificados) {
+      shStg.getRange(2, 1, dadosStg.length, ESPACOS_STAGING_HEADERS.length).setValues(dadosStg);
+    }
+
+    return resultados;
+  } finally {
+    lock.releaseLock();
+  }
+}
+

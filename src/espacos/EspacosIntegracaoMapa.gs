@@ -170,3 +170,46 @@ function listarPinosDoEspaco(idEspaco) {
     return obj;
   });
 }
+
+/**
+ * Atualiza múltiplos pinos em LOJAS_MAPA em uma única operação em bloco.
+ * Preserva 100% dos dados legados e grava exclusivamente ID_ESPACO e PAPEL_REPRESENTACAO.
+ * @param {Map<string, string>} mapaPinos Map de idLojaMapa -> idEspaco
+ * @returns {number} Quantidade de pinos atualizados
+ */
+function vincularEspacosAPinosMapaEmBloco_(mapaPinos) {
+  if (!mapaPinos || mapaPinos.size === 0) return 0;
+  garantirColunasIntegracaoLojasMapa_();
+  const sh = obterAbaLojasMapa_();
+  const lastRow = sh.getLastRow();
+  if (lastRow <= 1) return 0;
+
+  const lastCol = sh.getLastColumn();
+  const headers = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
+  const colIdPin = headers.indexOf('ID_LOJA_MAPA');
+  const colIdEsp = headers.indexOf('ID_ESPACO');
+  const colPapel = headers.indexOf('PAPEL_REPRESENTACAO');
+
+  if (colIdPin < 0 || colIdEsp < 0 || colPapel < 0) {
+    throw new Error('Colunas necessárias não encontradas em LOJAS_MAPA');
+  }
+
+  const range = sh.getRange(2, 1, lastRow - 1, lastCol);
+  const data = range.getValues();
+  let atualizados = 0;
+
+  for (let r = 0; r < data.length; r++) {
+    const pinId = String(data[r][colIdPin] || '').trim();
+    if (mapaPinos.has(pinId)) {
+      const idEsp = mapaPinos.get(pinId);
+      data[r][colIdEsp] = idEsp;
+      data[r][colPapel] = 'PRIMARIA';
+      atualizados++;
+    }
+  }
+
+  if (atualizados > 0) {
+    range.setValues(data);
+  }
+  return atualizados;
+}

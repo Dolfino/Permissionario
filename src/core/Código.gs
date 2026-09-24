@@ -113,12 +113,13 @@ function doPost(e) {
     const payload = JSON.parse(raw);
     const action = payload.action;
 
-    if (action === 'backup_pre') {
+    if (action === 'backup_pre' || action === 'backup_pos') {
       const matrizId = ESPACOS_CONFIG.SPREADSHEET_ID_CANONICO_ESPACOS;
       const arqMatriz = DriveApp.getFileById(matrizId);
       const agora = new Date();
       const stamp = Utilities.formatDate(agora, ESPACOS_CONFIG.TIMEZONE, 'yyyyMMdd-HHmmss');
-      const nomeBackup = 'BACKUP_PRE_M2B_CEOP_2026-09-24_' + stamp;
+      const prefixo = action === 'backup_pos' ? 'BACKUP_POS_M2B_CEOP_2026-09-24_' : 'BACKUP_PRE_M2B_CEOP_2026-09-24_';
+      const nomeBackup = prefixo + stamp;
       let pastaDestino = null;
       const pais = arqMatriz.getParents();
       if (pais.hasNext()) pastaDestino = pais.next();

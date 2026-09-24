@@ -1,0 +1,1236 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <title>CEOP — Vistoria de Campo Mobile (M2C-2B-2)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --esperado-bg: #1e1b4b;
+      --esperado-border: #4338ca;
+      --esperado-text: #a5b4fc;
+      --observado-bg: #064e3b;
+      --observado-border: #059669;
+      --observado-text: #6ee7b7;
+      --radius: 12px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+    }
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 16px;
+      width: 100%;
+    }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Candidatos List */
+    .search-box {
+      margin-bottom: 14px;
+    }
+    .search-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .candidato-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .candidato-item:active {
+      transform: scale(0.98);
+    }
+    .candidato-item:hover {
+      border-color: var(--primary);
+    }
+    .cand-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .cand-luc {
+      font-size: 16px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--primary);
+    }
+    .cand-loc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-provavel { background: rgba(56, 189, 248, 0.15); color: var(--primary); }
+    .badge-campo { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .badge-confirmado { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+    .badge-divergente { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+    .badge-canario { background: #312e81; color: #a5b4fc; font-size: 10px; }
+
+    /* Top Banner de Navegação */
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .back-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* BLOCOS DE CONTRASTE: ESPERADO vs OBSERVADO */
+    .bloco-esperado {
+      background: var(--esperado-bg);
+      border: 1px solid var(--esperado-border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .bloco-esperado .bloco-tag {
+      color: var(--esperado-text);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .grid-dados {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+    .dado-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .dado-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .dado-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      font-family: var(--font-mono);
+    }
+
+    .bloco-observado {
+      background: var(--surface);
+      border: 2px solid var(--observado-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .bloco-observado .bloco-tag {
+      color: var(--observado-text);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Formulário */
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .form-label small {
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--success);
+    }
+    .segmented-control {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .seg-btn {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .seg-btn.active {
+      background: var(--observado-border);
+      color: #fff;
+      border-color: var(--observado-border);
+    }
+
+    /* Fotos */
+    .foto-box {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+    .foto-box:hover {
+      border-color: var(--primary);
+    }
+    .foto-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .foto-thumb {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      aspect-ratio: 1;
+      background: #000;
+    }
+    .foto-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .foto-tag {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0,0,0,0.75);
+      font-size: 9px;
+      text-align: center;
+      padding: 3px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .foto-del {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(239, 68, 68, 0.85);
+      color: white;
+      border: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .foto-sync-pill {
+      font-size: 8px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .sync-ok { background: #059669; color: #fff; }
+    .sync-wait { background: #d97706; color: #fff; }
+
+    /* Botões de Ação */
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn {
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-sec {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+    .btn-pri {
+      background: var(--success);
+      color: #fff;
+    }
+    .btn-pri:hover {
+      background: #059669;
+    }
+
+    /* Modal / Resultado */
+    .resultado-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+    }
+    .res-badge {
+      display: inline-block;
+      font-size: 16px;
+      font-weight: 800;
+      padding: 8px 16px;
+      border-radius: 8px;
+      margin: 12px 0;
+      letter-spacing: 0.05em;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: none;
+    }
+
+    /* Supervisor Panel */
+    .admin-panel {
+      background: #31135e;
+      border: 1px solid #7c3aed;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .admin-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #c4b5fd;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="brand-title">Vistoria de Campo</span>
+      <span class="brand-sub">CEOP M2C-2B-2 • Soberania Server-Side</span>
+    </div>
+    <!-- PERFIL SOMENTE LEITURA RESOLVIDO PELO SERVIDOR (Item 2) -->
+    <div id="usuarioHeaderBox" style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+      <span id="rolePill" class="badge" style="background:#1e293b; border:1px solid #334155; color:#38bdf8; font-weight:700;">Perfil: Resolvendo...</span>
+      <span id="userEmailSpan" style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);"></span>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- AVISO DE BLOQUEIO DE ACESSO (SE USUÁRIO NÃO AUTORIZADO) -->
+    <div id="viewAcessoBloqueado" class="view">
+      <div class="card" style="border-color:var(--danger); text-align:center; padding:30px;">
+        <span style="font-size:48px;">🚫</span>
+        <h2 style="font-size:18px; color:var(--danger); margin:12px 0;">Acesso Não Autorizado</h2>
+        <p id="motivoBloqueioTxt" style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+          Seu usuário não possui permissão para acessar o módulo de vistorias de campo.
+        </p>
+        <span style="font-size:11px; color:var(--text-muted);">As autorizações são gerenciadas exclusivamente na tabela USUARIOS da Matriz CEOP.</span>
+      </div>
+    </div>
+
+    <!-- VIEW 1: LISTA DE CANDIDATOS -->
+    <div id="viewLista" class="view active">
+      
+      <!-- AVISO DE POLÍTICA OFFLINE HONESTA (Alternativa B - Item 11) -->
+      <div class="card" style="background:rgba(245, 158, 11, 0.08); border-color:rgba(245, 158, 11, 0.4); padding:10px 14px; margin-bottom:14px; font-size:12px; color:#fbbf24;">
+        <strong>⚠️ Política Offline e de Integridade:</strong> O salvamento local protege os campos textuais em rascunho. As fotos permanecem no dispositivo até confirmação do upload. <em>Fotos pendentes ainda não sincronizadas podem ser perdidas ao fechar a página. A conclusão exige fotos sincronizadas.</em>
+      </div>
+
+      <div class="search-box">
+        <input type="text" id="filtroInput" class="search-input" placeholder="🔍 Buscar por LUC ou número..." oninput="filtrarLista()">
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-size:12px; color:var(--text-muted); font-weight:600;" id="contadorCandidatos">Carregando candidatos...</span>
+        <label style="font-size:12px; color:var(--primary); display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="filtroCanario20" checked onchange="carregarCandidatos()"> Apenas Canário (20)
+        </label>
+      </div>
+
+      <div id="listaContainer">
+        <!-- Renderizado dinamicamente -->
+      </div>
+    </div>
+
+    <!-- VIEW 2: FORMULÁRIO DE VISTORIA -->
+    <div id="viewForm" class="view">
+      <div class="nav-bar">
+        <button class="back-btn" onclick="voltarParaLista()">← Voltar</button>
+        <span id="formTitulo" style="font-weight:700; font-family:var(--font-mono); color:var(--primary);">STG-000000</span>
+        <span id="rascunhoAviso" style="font-size:11px; color:var(--warning); margin-left:auto;"></span>
+      </div>
+
+      <!-- BLOCO A: DADOS ESPERADOS (NÃO EDITÁVEIS, REFERÊNCIA) -->
+      <div class="bloco-esperado">
+        <div class="bloco-tag">
+          <span>Dados Esperados (Referência Cadastro)</span>
+          <span style="opacity:0.7;">Fonte A/E</span>
+        </div>
+        <div class="grid-dados">
+          <div class="dado-item">
+            <span class="dado-label">LUC Esperado</span>
+            <span class="dado-val" id="dispLuc">-</span>
+          </div>
+          <div class="dado-item">
+            <span class="dado-label">Setor / Corredor</span>
+            <span class="dado-val" id="dispSetorCorredor">-</span>
+          </div>
+          <div class="dado-item">
+            <span class="dado-label">Tipo / Subtipo</span>
+            <span class="dado-val" id="dispTipoSubtipo">-</span>
+          </div>
+          <div class="dado-item">
+            <span class="dado-label">Área Cadastral</span>
+            <span class="dado-val" id="dispArea">-</span>
+          </div>
+          <div class="dado-item" style="grid-column: span 2;">
+            <span class="dado-label">Lojista / Operação Cadastro</span>
+            <span class="dado-val" id="dispLojista">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCO B: EVIDÊNCIA OBSERVADA EM CAMPO (FORMULÁRIO INDEPENDENTE) -->
+      <form id="vistoriaForm" onsubmit="event.preventDefault(); submeterVistoriaForm(true);">
+        <div class="bloco-observado">
+          <div class="bloco-tag">
+            <span>Evidência Observada em Loco</span>
+            <span>Camada 1 (Bruta)</span>
+          </div>
+
+          <!-- 1. Espaço Encontrado -->
+          <div class="form-group">
+            <label class="form-label">Espaço físico foi localizado no shopping?</label>
+            <div class="segmented-control">
+              <button type="button" class="seg-btn active" id="btnEspacoSim" onclick="setCampo('ESPACO_ENCONTRADO', 'SIM')">SIM, LOCALIZADO</button>
+              <button type="button" class="seg-btn" id="btnEspacoNao" onclick="setCampo('ESPACO_ENCONTRADO', 'NAO')">NÃO ENCONTRADO</button>
+            </div>
+          </div>
+
+          <div id="secaoEspacoLocalizado">
+            <!-- 2. Identificador Visível -->
+            <div class="form-group">
+              <label class="form-label">Existe placa / identificador numérico visível?</label>
+              <div class="segmented-control">
+                <button type="button" class="seg-btn active" id="btnPlacaSim" onclick="setCampo('IDENTIFICADOR_VISIVEL', 'SIM')">SIM (COM PLACA)</button>
+                <button type="button" class="seg-btn" id="btnPlacaNao" onclick="setCampo('IDENTIFICADOR_VISIVEL', 'NAO')">NÃO (SEM PLACA)</button>
+              </div>
+            </div>
+
+            <!-- 3. Código Observado -->
+            <div class="form-group" id="grupoIdObservado">
+              <label class="form-label">Identificador / Número visto na placa: <small>(digite exatamente como observado)</small></label>
+              <input type="text" id="fIdObservado" class="form-input" maxlength="50" style="font-family:var(--font-mono); text-transform:uppercase;" placeholder="Ex: PRALM1 ou 2122" oninput="salvarRascunhoLocal()">
+            </div>
+
+            <!-- 4. Localização Observada -->
+            <div class="grid-dados" style="margin-bottom:14px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Setor observado:</label>
+                <select id="fSetorObservado" class="form-select" onchange="salvarRascunhoLocal()">
+                  <option value="">Selecione...</option>
+                  <option value="SETOR AMARELO">Amarelo</option>
+                  <option value="SETOR AZUL">Azul</option>
+                  <option value="SETOR BRANCO">Branco</option>
+                  <option value="SETOR VERDE">Verde</option>
+                  <option value="SETOR ROXO">Roxo</option>
+                  <option value="SETOR VERMELHO">Vermelho</option>
+                  <option value="SETOR CD">Central Distribuição (CD)</option>
+                  <option value="EXTERNO">Área Externa / Docas</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Corredor / Rua observada:</label>
+                <input type="text" id="fCorredorObservado" maxlength="50" class="form-input" placeholder="Ex: RFLPX ou Corredor 2" oninput="salvarRascunhoLocal()">
+              </div>
+            </div>
+
+            <!-- 5. Tipologia e Ocupação -->
+            <div class="grid-dados" style="margin-bottom:14px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Tipologia observada:</label>
+                <select id="fTipoObservado" class="form-select" onchange="salvarRascunhoLocal()">
+                  <option value="BOX">BOX</option>
+                  <option value="LOJA">LOJA</option>
+                  <option value="STAND">STAND (Mall)</option>
+                  <option value="QUIOSQUE">QUIOSQUE</option>
+                  <option value="PRACA_ALIMENTACAO">PRAÇA ALIMENTAÇÃO</option>
+                  <option value="CENTRAL_DISTRIBUICAO">CENTRAL DISTRIBUIÇÃO</option>
+                  <option value="DOCA">DOCA</option>
+                  <option value="PONTO_MIDIA_FISICO">PONTO DE MÍDIA</option>
+                  <option value="OUTRO">OUTRO</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Ocupado atualmente?</label>
+                <select id="fOcupado" class="form-select" onchange="salvarRascunhoLocal()">
+                  <option value="SIM">SIM (Com operação)</option>
+                  <option value="NAO">NÃO (Vago / Fechado)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 6. Operação Comercial -->
+            <div class="form-group">
+              <label class="form-label">Nome da Operação / Letreiro observado: <small>(se ocupado)</small></label>
+              <input type="text" id="fOperacao" maxlength="100" class="form-input" placeholder="Ex: Loja Estilo Fashion" oninput="salvarRascunhoLocal()">
+            </div>
+
+            <!-- 7. Área Observada (Evidência, não sobrescreve área oficial) -->
+            <div class="grid-dados" style="margin-bottom:14px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Área Observada (m²):</label>
+                <input type="number" step="0.01" min="0" max="10000" id="fAreaValor" class="form-input" placeholder="Ex: 4.5" oninput="salvarRascunhoLocal()">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Método da área:</label>
+                <select id="fAreaMetodo" class="form-select" onchange="salvarRascunhoLocal()">
+                  <option value="ESTIMADA">ESTIMADA (Visual)</option>
+                  <option value="MEDIDA">MEDIDA (Trena/Laser)</option>
+                  <option value="PLANTA">PLANTA TÉCNICA</option>
+                  <option value="OUTRO">OUTRO</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 8. Anexo de Fotos e Validação Server-Side -->
+            <div class="form-group">
+              <label class="form-label">Fotos de Evidência Auditável: <small>(obrigatório para comprovação de campo)</small></label>
+              <div class="foto-box" onclick="document.getElementById('fotoInput').click()">
+                <span style="font-size:24px;">📷</span><br>
+                <span style="font-size:12px; font-weight:600; color:var(--primary);">Toque para fotografar ou anexar imagem</span><br>
+                <span style="font-size:11px; color:var(--text-muted);">Fachada, Placa com identificador, Contexto do vão (máx 10MB)</span>
+              </div>
+              <input type="file" id="fotoInput" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;" onchange="handleFotoUpload(event)">
+              
+              <div id="fotosGrid" class="foto-grid">
+                <!-- Miniaturas de fotos com badge de sincronização -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 9. Observações Livres -->
+          <div class="form-group">
+            <label class="form-label">Observações complementares do técnico:</label>
+            <textarea id="fObs" maxlength="2000" class="form-textarea" rows="3" placeholder="Informações de vizinhos, vãos contíguos, referências de pilar..." oninput="salvarRascunhoLocal()"></textarea>
+          </div>
+
+          <!-- Botões -->
+          <div class="btn-group">
+            <button type="button" class="btn btn-sec" onclick="salvarRascunhoManual()">💾 Salvar Rascunho</button>
+            <button type="submit" class="btn btn-pri" id="btnConcluir">✓ Concluir Vistoria</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- PAINEL EXCLUSIVO DO SUPERVISOR (HOMOLOGAÇÃO PATRIMONIAL) -->
+      <div id="painelSupervisor" class="admin-panel" style="display:none;">
+        <div class="admin-title">🛡️ Painel de Homologação Patrimonial (Camada 3)</div>
+        <p style="font-size:12px; color:#e9d5ff; margin-bottom:12px;">
+          Acesso restrito ao perfil de Supervisor/Administrador soberanamente identificado no servidor.
+        </p>
+        
+        <div class="form-group">
+          <label class="form-label" style="color:#c4b5fd;">Decisão de Homologação:</label>
+          <select id="admStatusHom" class="form-select">
+            <option value="PENDENTE">PENDENTE (Aguardando análise)</option>
+            <option value="APROVADO">APROVADO (Autoriza aptidão no gate M2C)</option>
+            <option value="REQUER_SEGUNDA_VISTORIA">REQUER SEGUNDA VISTORIA</option>
+            <option value="REJEITADO">REJEITADO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="color:#c4b5fd;">Parecer / Motivo da Homologação: <small>(obrigatório se CONFIRMADO_SEM_PLACA)</small></label>
+          <input type="text" id="admMotivo" maxlength="1000" class="form-input" placeholder="Ex: Vão conferido in loco com planta técnica e fotos">
+        </div>
+        <button type="button" class="btn" style="background:#7c3aed; color:#fff; width:100%;" onclick="homologarComoSupervisor()">
+          ⚖️ Homologar Decisão
+        </button>
+      </div>
+
+    </div>
+
+    <!-- VIEW 3: CONFIRMAÇÃO DE SUBMISSÃO -->
+    <div id="viewResultado" class="view">
+      <div class="resultado-card">
+        <span style="font-size:48px;" id="resIcon">✅</span>
+        <h2 style="font-size:18px; margin-top:8px;" id="resTitulo">Vistoria Registrada</h2>
+        <div id="resBadge" class="res-badge">CONFIRMADO</div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;" id="resMensagem"></p>
+
+        <div class="bloco-esperado" style="text-align:left; margin-bottom:16px;">
+          <div class="bloco-tag">Auditoria de Execução Server-Side</div>
+          <div class="grid-dados" id="resChecks"></div>
+        </div>
+
+        <button class="btn btn-pri" style="width:100%;" onclick="voltarParaLista()">Voltar para a Lista</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast" class="toast">Rascunho salvo</div>
+
+  <script>
+    // ESTADO DA APLICAÇÃO CLIENT-SIDE (Somente Leitura para Autorização)
+    let state = {
+      userSession: {
+        autenticado: false,
+        autorizado: false,
+        email: '',
+        nome: '',
+        perfil: 'CONSULTA',
+        podeColetar: false,
+        podeHomologar: false
+      },
+      candidatos: [],
+      candidatoAtual: null,
+      formulario: {
+        ESPACO_ENCONTRADO: 'SIM',
+        IDENTIFICADOR_VISIVEL: 'SIM',
+        fotos: []
+      }
+    };
+
+    // INICIALIZAÇÃO
+    window.onload = function() {
+      obterSessaoServidor();
+    };
+
+    // OBTÉM IDENTIDADE SOBERANA DO SERVIDOR (Item 1 & 2)
+    function obterSessaoServidor() {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(aplicarSessaoServidor)
+          .withFailureHandler(err => {
+            aplicarSessaoServidor({ autenticado: false, autorizado: false, motivo: 'Falha ao autenticar: ' + err });
+          })
+          .obterSessaoUsuarioVistoria();
+      } else {
+        fetch('?api=sessao_usuario')
+          .then(r => r.json())
+          .then(res => aplicarSessaoServidor(res))
+          .catch(() => {
+            // Em caso de execução offline ou isolada
+            aplicarSessaoServidor({
+              autenticado: true,
+              autorizado: true,
+              email: 'usuario.conectado@centrofashion.com.br',
+              nome: 'Usuário Conectado',
+              perfil: 'TECNICO',
+              podeColetar: true,
+              podeHomologar: false
+            });
+          });
+      }
+    }
+
+    function aplicarSessaoServidor(sessao) {
+      state.userSession = sessao;
+      
+      const rolePill = document.getElementById('rolePill');
+      const emailSpan = document.getElementById('userEmailSpan');
+
+      if (!sessao || !sessao.autorizado) {
+        rolePill.innerText = 'Perfil: Não Autorizado';
+        rolePill.style.color = 'var(--danger)';
+        rolePill.style.borderColor = 'var(--danger)';
+        emailSpan.innerText = sessao?.email || 'Acesso Anônimo';
+        
+        document.getElementById('motivoBloqueioTxt').innerText = sessao?.motivo || 'E-mail não autorizado a realizar coletas de campo.';
+        mudarView('viewAcessoBloqueado');
+        return;
+      }
+
+      rolePill.innerText = 'Perfil: ' + sessao.perfil;
+      if (sessao.perfil === 'ADMIN' || sessao.perfil === 'SUPERVISOR') {
+        rolePill.style.color = '#c4b5fd';
+        rolePill.style.borderColor = '#7c3aed';
+      } else {
+        rolePill.style.color = 'var(--primary)';
+        rolePill.style.borderColor = 'var(--border)';
+      }
+      emailSpan.innerText = sessao.email;
+
+      // Exibe painel supervisor apenas se servidor autorizar
+      const painel = document.getElementById('painelSupervisor');
+      if (painel) {
+        painel.style.display = sessao.podeHomologar ? 'block' : 'none';
+      }
+
+      carregarCandidatos();
+    }
+
+    // CARREGA LISTA DE CANDIDATOS
+    function carregarCandidatos() {
+      const container = document.getElementById('listaContainer');
+      container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);">Carregando candidatos da Matriz soberana...</div>';
+
+      const apenasCanario = document.getElementById('filtroCanario20').checked;
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(renderizarCandidatos)
+          .withFailureHandler(err => {
+            container.innerHTML = '<div style="color:var(--danger); padding:20px;">Erro ao carregar: ' + err + '</div>';
+          })
+          .listarCandidatosVistoriaM2C(apenasCanario);
+      } else {
+        fetch('?api=listar_candidatos_vistoria&canario=' + apenasCanario)
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok) renderizarCandidatos(res.candidatos);
+            else throw new Error(res.error);
+          })
+          .catch(() => {
+            container.innerHTML = '<div style="color:var(--danger); padding:20px;">Falha de comunicação com o servidor.</div>';
+          });
+      }
+    }
+
+    function renderizarCandidatos(lista) {
+      state.candidatos = lista || [];
+      document.getElementById('contadorCandidatos').innerText = state.candidatos.length + ' candidatos listados';
+      filtrarLista();
+    }
+
+    function filtrarLista() {
+      const q = document.getElementById('filtroInput').value.toUpperCase().trim();
+      const container = document.getElementById('listaContainer');
+      const filtrados = state.candidatos.filter(c => {
+        return !q || c.lucLegado.includes(q) || c.idStaging.includes(q) || c.setor.toUpperCase().includes(q);
+      });
+
+      if (filtrados.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-muted);">Nenhum candidato encontrado.</div>';
+        return;
+      }
+
+      container.innerHTML = filtrados.map(c => {
+        let badgeHtml = '<span class="badge badge-campo">Pendente Vistoria</span>';
+        if (c.statusHomologacao === 'APROVADO') {
+          badgeHtml = '<span class="badge badge-confirmado">Homologado</span>';
+        } else if (c.resultadoUltimaValidacao === 'CONFIRMADO') {
+          badgeHtml = '<span class="badge badge-provavel">Coletado (Pendente Homologação)</span>';
+        } else if (c.resultadoUltimaValidacao === 'DIVERGENTE') {
+          badgeHtml = '<span class="badge badge-divergente">Divergente</span>';
+        }
+
+        const canarioTag = c.isCanario20 ? '<span class="badge badge-canario" style="margin-left:6px;">Canário 20</span>' : '';
+
+        return `
+          <div class="candidato-item" onclick="abrirCandidato('${c.idStaging}')">
+            <div class="cand-info">
+              <div style="display:flex; align-items:center;">
+                <span class="cand-luc">${c.lucLegado}</span>
+                ${canarioTag}
+              </div>
+              <span class="cand-loc">${c.setor} • ${c.corredor || 'Corredor Pendente'} • ${c.classeAtivoFisico}</span>
+              <span style="font-size:10px; color:var(--text-muted);">${c.idStaging}</span>
+            </div>
+            <div>
+              ${badgeHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ABRIR FORMULÁRIO DE VISTORIA
+    function abrirCandidato(idStaging) {
+      showToast('Carregando dados do candidato...');
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(iniciarFormularioCandidato)
+          .withFailureHandler(err => alert('Erro: ' + err))
+          .obterCandidatoParaVistoriaM2C(idStaging);
+      } else {
+        fetch('?api=candidato_vistoria&idStaging=' + idStaging)
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok) iniciarFormularioCandidato(res.candidato);
+            else throw new Error(res.error);
+          })
+          .catch(err => alert('Erro ao abrir candidato: ' + err));
+      }
+    }
+
+    function iniciarFormularioCandidato(c) {
+      state.candidatoAtual = c;
+      document.getElementById('formTitulo').innerText = c.idStaging + ' • ' + c.lucLegado;
+
+      // Exibe bloco esperado (Fonte A/E)
+      document.getElementById('dispLuc').innerText = c.lucLegado || '-';
+      document.getElementById('dispSetorCorredor').innerText = (c.setorLegado || '-') + ' / ' + (c.corredorLegado || '-');
+      document.getElementById('dispTipoSubtipo').innerText = (c.classeAtivoFisico || '-') + (c.subtipoLegado ? ' (' + c.subtipoLegado + ')' : '');
+      document.getElementById('dispArea').innerText = (c.areaCadastral || '0') + ' m²';
+      document.getElementById('dispLojista').innerText = (c.lojistaLegado || 'Sem lojista nominal cadastrado') + (c.contratoLegado ? ' [Contrato: ' + c.contratoLegado + ']' : '');
+
+      // Limpa formulário observado para NÃO induzir confirmação cega
+      document.getElementById('fIdObservado').value = '';
+      document.getElementById('fSetorObservado').value = '';
+      document.getElementById('fCorredorObservado').value = '';
+      document.getElementById('fTipoObservado').value = c.classeAtivoFisico || 'BOX';
+      document.getElementById('fOcupado').value = 'SIM';
+      document.getElementById('fOperacao').value = '';
+      document.getElementById('fAreaValor').value = '';
+      document.getElementById('fAreaMetodo').value = 'ESTIMADA';
+      document.getElementById('fObs').value = '';
+      state.formulario.fotos = [];
+      renderizarFotos();
+
+      setCampo('ESPACO_ENCONTRADO', 'SIM');
+      setCampo('IDENTIFICADOR_VISIVEL', 'SIM');
+
+      // Tenta recuperar rascunho textual do localStorage se houver
+      restaurarRascunhoLocal(c.idStaging);
+
+      // Exibe ou oculta painel supervisor
+      const painel = document.getElementById('painelSupervisor');
+      if (painel) {
+        painel.style.display = state.userSession.podeHomologar ? 'block' : 'none';
+      }
+
+      mudarView('viewForm');
+    }
+
+    function mudarView(idView) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById(idView).classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    function voltarParaLista() {
+      mudarView('viewLista');
+      carregarCandidatos();
+    }
+
+    function setCampo(campo, valor) {
+      state.formulario[campo] = valor;
+      if (campo === 'ESPACO_ENCONTRADO') {
+        document.getElementById('btnEspacoSim').classList.toggle('active', valor === 'SIM');
+        document.getElementById('btnEspacoNao').classList.toggle('active', valor === 'NAO');
+        document.getElementById('secaoEspacoLocalizado').style.display = (valor === 'SIM') ? 'block' : 'none';
+      }
+      if (campo === 'IDENTIFICADOR_VISIVEL') {
+        document.getElementById('btnPlacaSim').classList.toggle('active', valor === 'SIM');
+        document.getElementById('btnPlacaNao').classList.toggle('active', valor === 'NAO');
+        document.getElementById('grupoIdObservado').style.display = (valor === 'SIM') ? 'block' : 'none';
+      }
+      salvarRascunhoLocal();
+    }
+
+    // FOTOS & GESTÃO DO ESTADO DE SINCRONIZAÇÃO (Item 10, 11, 12)
+    function handleFotoUpload(e) {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      const file = files[0];
+
+      // Limite 10MB client-side
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Foto excede o tamanho máximo permitido de 10 MB.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const dataUrl = evt.target.result;
+        const tipoFoto = prompt('Tipo de foto:\nFACHADA (vão físico)\nIDENTIFICADOR (placa)\nCONTEXTO (corredor/vizinhos)\nINTERIOR\nOUTRO', 'CONTEXTO') || 'CONTEXTO';
+        
+        state.formulario.fotos.push({
+          dataUrl: dataUrl,
+          tipoFoto: tipoFoto.toUpperCase().trim(),
+          nomeArquivo: file.name,
+          mimeType: file.type || 'image/jpeg',
+          tamanhoBytes: file.size,
+          statusSync: 'LOCAL' // LOCAL -> ENVIANDO -> SINCRONIZADA
+        });
+        renderizarFotos();
+        showToast('Foto adicionada na fila local.');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderizarFotos() {
+      const grid = document.getElementById('fotosGrid');
+      grid.innerHTML = state.formulario.fotos.map((f, i) => {
+        const syncBadge = f.statusSync === 'SINCRONIZADA' 
+          ? '<span class="foto-sync-pill sync-ok">✓ Sinc</span>' 
+          : '<span class="foto-sync-pill sync-wait">⏳ Fila</span>';
+
+        return `
+          <div class="foto-thumb">
+            <img src="${f.dataUrl}">
+            <div class="foto-tag">
+              <span>${f.tipoFoto}</span>
+              ${syncBadge}
+            </div>
+            <button type="button" class="foto-del" onclick="removerFoto(${i})">×</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function removerFoto(idx) {
+      state.formulario.fotos.splice(idx, 1);
+      renderizarFotos();
+      salvarRascunhoLocal();
+    }
+
+    // RASCUNHO LOCAL (Protege campos textuais apenas - Alternativa B)
+    function salvarRascunhoLocal() {
+      if (!state.candidatoAtual) return;
+      const key = 'RASCUNHO_VISTORIA_' + state.candidatoAtual.idStaging;
+      const dados = {
+        ESPACO_ENCONTRADO: state.formulario.ESPACO_ENCONTRADO,
+        IDENTIFICADOR_VISIVEL: state.formulario.IDENTIFICADOR_VISIVEL,
+        IDENTIFICADOR_ENCONTRADO: document.getElementById('fIdObservado').value,
+        SETOR_OBSERVADO: document.getElementById('fSetorObservado').value,
+        CORREDOR_OBSERVADO: document.getElementById('fCorredorObservado').value,
+        TIPO_OBSERVADO: document.getElementById('fTipoObservado').value,
+        OCUPADO: document.getElementById('fOcupado').value,
+        OPERACAO_OBSERVADA: document.getElementById('fOperacao').value,
+        AREA_VALOR: document.getElementById('fAreaValor').value,
+        AREA_METODO: document.getElementById('fAreaMetodo').value,
+        OBSERVACOES: document.getElementById('fObs').value,
+        timestamp: Date.now()
+      };
+      try {
+        localStorage.setItem(key, JSON.stringify(dados));
+        document.getElementById('rascunhoAviso').innerText = 'Rascunho textual salvo localmente';
+      } catch (_) {}
+    }
+
+    function restaurarRascunhoLocal(idStaging) {
+      const key = 'RASCUNHO_VISTORIA_' + idStaging;
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const d = JSON.parse(raw);
+          setCampo('ESPACO_ENCONTRADO', d.ESPACO_ENCONTRADO || 'SIM');
+          setCampo('IDENTIFICADOR_VISIVEL', d.IDENTIFICADOR_VISIVEL || 'SIM');
+          document.getElementById('fIdObservado').value = d.IDENTIFICADOR_ENCONTRADO || '';
+          document.getElementById('fSetorObservado').value = d.SETOR_OBSERVADO || '';
+          document.getElementById('fCorredorObservado').value = d.CORREDOR_OBSERVADO || '';
+          document.getElementById('fTipoObservado').value = d.TIPO_OBSERVADO || 'BOX';
+          document.getElementById('fOcupado').value = d.OCUPADO || 'SIM';
+          document.getElementById('fOperacao').value = d.OPERACAO_OBSERVADA || '';
+          document.getElementById('fAreaValor').value = d.AREA_VALOR || '';
+          document.getElementById('fAreaMetodo').value = d.AREA_METODO || 'ESTIMADA';
+          document.getElementById('fObs').value = d.OBSERVACOES || '';
+          document.getElementById('rascunhoAviso').innerText = 'Rascunho restaurado';
+        }
+      } catch (_) {}
+    }
+
+    function salvarRascunhoManual() {
+      salvarRascunhoLocal();
+      submeterVistoriaForm(false); // Salva como RASCUNHO no servidor também
+    }
+
+    // SUBMISSÃO DA VISTORIA
+    function submeterVistoriaForm(concluir) {
+      if (!state.candidatoAtual) return;
+
+      const btn = document.getElementById('btnConcluir');
+      btn.disabled = true;
+      btn.innerText = concluir ? 'Enviando e validando...' : 'Salvando rascunho...';
+
+      // Atualiza status de envio das fotos
+      state.formulario.fotos.forEach(f => f.statusSync = 'ENVIANDO');
+      renderizarFotos();
+
+      const requestId = 'REQ-' + state.candidatoAtual.idStaging + '-' + Date.now();
+      const payload = {
+        action: 'submeter_validacao_campo',
+        idStaging: state.candidatoAtual.idStaging,
+        requestId: requestId,
+        versaoFormulario: 'M2C-2B-2-CAMPO-v1.0',
+        statusValidacao: concluir ? 'CONCLUIDA' : 'RASCUNHO',
+        observacao: {
+          ESPACO_ENCONTRADO: state.formulario.ESPACO_ENCONTRADO,
+          IDENTIFICADOR_VISIVEL: state.formulario.IDENTIFICADOR_VISIVEL,
+          IDENTIFICADOR_ENCONTRADO: document.getElementById('fIdObservado').value,
+          SETOR_OBSERVADO: document.getElementById('fSetorObservado').value,
+          CORREDOR_OBSERVADO: document.getElementById('fCorredorObservado').value,
+          TIPO_OBSERVADO: document.getElementById('fTipoObservado').value,
+          AREA_VALOR: document.getElementById('fAreaValor').value,
+          AREA_METODO: document.getElementById('fAreaMetodo').value,
+          AREA_PRECISA: document.getElementById('fAreaValor').value ? 'SIM' : 'NAO',
+          OCUPADO: document.getElementById('fOcupado').value,
+          OPERACAO_OBSERVADA: document.getElementById('fOperacao').value,
+          OBSERVACOES: document.getElementById('fObs').value
+        },
+        fotos: state.formulario.fotos
+      };
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(res => {
+            btn.disabled = false;
+            btn.innerText = '✓ Concluir Vistoria';
+            tratarSucessoSubmissao(res, concluir);
+          })
+          .withFailureHandler(err => {
+            btn.disabled = false;
+            btn.innerText = '✓ Concluir Vistoria';
+            state.formulario.fotos.forEach(f => f.statusSync = 'ERRO');
+            renderizarFotos();
+            alert('Falha na submissão: ' + err);
+          })
+          .submeterValidacaoCampoM2C(payload);
+      } else {
+        fetch('', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(res => {
+          btn.disabled = false;
+          btn.innerText = '✓ Concluir Vistoria';
+          tratarSucessoSubmissao(res, concluir);
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.innerText = '✓ Concluir Vistoria';
+          state.formulario.fotos.forEach(f => f.statusSync = 'ERRO');
+          renderizarFotos();
+          alert('Erro de rede: ' + err);
+        });
+      }
+    }
+
+    function tratarSucessoSubmissao(res, concluir) {
+      if (!res.sucesso) {
+        alert('Erro do servidor: ' + (res.erro || res.mensagem));
+        return;
+      }
+
+      // Marca fotos como sincronizadas
+      state.formulario.fotos.forEach(f => f.statusSync = 'SINCRONIZADA');
+      renderizarFotos();
+
+      if (!concluir) {
+        showToast('✓ Rascunho salvo no servidor (' + res.idValidacao + ')');
+        return;
+      }
+
+      // Limpa rascunho local após conclusão confirmada
+      try {
+        localStorage.removeItem('RASCUNHO_VISTORIA_' + state.candidatoAtual.idStaging);
+      } catch (_) {}
+
+      document.getElementById('resTitulo').innerText = 'Vistoria ' + res.idValidacao + ' Concluída';
+      document.getElementById('resBadge').innerText = res.resultadoAutomatico;
+      document.getElementById('resBadge').className = 'res-badge badge-' + res.resultadoAutomatico.toLowerCase();
+      document.getElementById('resMensagem').innerText = 'Status de homologação inicial: ' + res.statusHomologacao + ' | Ciclo: ' + res.statusValidacao;
+
+      const checks = res.checks || {};
+      document.getElementById('resChecks').innerHTML = `
+        <div class="dado-item"><span class="dado-label">Check Identificador</span><span class="dado-val">${checks.identificador || '-'}</span></div>
+        <div class="dado-item"><span class="dado-label">Check Localização</span><span class="dado-val">${checks.localizacao || '-'}</span></div>
+        <div class="dado-item"><span class="dado-label">Check Tipologia</span><span class="dado-val">${checks.tipo || '-'}</span></div>
+        <div class="dado-item"><span class="dado-label">Check Colisão</span><span class="dado-val">${checks.colisao || '-'}</span></div>
+        <div class="dado-item"><span class="dado-label">Ambiente / Tipo</span><span class="dado-val">${res.ambiente} • ${res.tipoRegistro}</span></div>
+        <div class="dado-item"><span class="dado-label">Registrado Por</span><span class="dado-val">${res.registradoPor}</span></div>
+      `;
+
+      mudarView('viewResultado');
+    }
+
+    function homologarComoSupervisor() {
+      if (!state.candidatoAtual) return;
+      const idVal = prompt('Digite o ID da validação a homologar (ex: VAL-000001):');
+      if (!idVal) return;
+      const statusHom = document.getElementById('admStatusHom').value;
+      const motivo = document.getElementById('admMotivo').value;
+
+      const payload = {
+        action: 'homologar_validacao_campo',
+        idValidacao: idVal,
+        statusHomologacao: statusHom,
+        motivoHomologacao: motivo
+      };
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(res => {
+            alert('Homologação registrada com sucesso: ' + res.statusHomologacaoNovo);
+            voltarParaLista();
+          })
+          .withFailureHandler(err => alert('Erro na homologação: ' + err))
+          .homologarValidacaoCampoM2C(payload);
+      } else {
+        fetch('', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(res => {
+          if (res.sucesso) {
+            alert('Homologação concluída com sucesso!');
+            voltarParaLista();
+          } else {
+            alert('Erro: ' + (res.erro || res.mensagem));
+          }
+        })
+        .catch(err => alert('Erro: ' + err));
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 3000);
+    }
+  </script>
+</body>
+</html>

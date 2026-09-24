@@ -497,13 +497,24 @@ function obterEspacoPorId(idEspaco) {
  * @param {string} luc
  * @returns {Object|null}
  */
-function obterEspacoPorLuc(luc) {
+/**
+ * Busca espaço por LUC.
+ * Por padrão, retorna apenas identificadores ativos/atuais (ATUAL = 'SIM').
+ * Identificadores históricos/inativos só são considerados se opcoes.incluirHistorico === true.
+ * @param {string} luc
+ * @param {Object} [opcoes]
+ * @param {boolean} [opcoes.incluirHistorico=false]
+ * @returns {Object|null}
+ */
+function obterEspacoPorLuc(luc, opcoes) {
   if (!luc) return null;
+  const opt = opcoes || {};
+  const incluirHistorico = opt.incluirHistorico === true;
   const lucBuscado = String(luc).trim().toUpperCase();
   const shEsp = obterAbaEspacos_();
   const lastRowEsp = shEsp.getLastRow();
 
-  // 1. Busca rápida no cache de ESPACOS (LUC atual)
+  // 1. Busca rápida no cache de ESPACOS (LUC atual ativo)
   if (lastRowEsp > 1) {
     const colLuc = ESPACOS_HEADERS.indexOf('LUC') + 1;
     const finder = shEsp.getRange(2, colLuc, lastRowEsp - 1, 1).createTextFinder(lucBuscado).matchEntireCell(true).findNext();
@@ -513,16 +524,23 @@ function obterEspacoPorLuc(luc) {
     }
   }
 
-  // 2. Busca no histórico de ESPACO_IDENTIFICADORES
+  // 2. Busca em ESPACO_IDENTIFICADORES
   const shIde = obterAbaEspacoIdentificadores_();
   const lastRowIde = shIde.getLastRow();
   if (lastRowIde > 1) {
     const colValor = ESPACO_IDENTIFICADORES_HEADERS.indexOf('VALOR') + 1;
-    const finderIde = shIde.getRange(2, colValor, lastRowIde - 1, 1).createTextFinder(lucBuscado).matchEntireCell(true).findNext();
-    if (finderIde) {
+    const finders = shIde.getRange(2, colValor, lastRowIde - 1, 1).createTextFinder(lucBuscado).matchEntireCell(true).findAll();
+    if (finders && finders.length > 0) {
       const colIdEsp = ESPACO_IDENTIFICADORES_HEADERS.indexOf('ID_ESPACO') + 1;
-      const idEsp = shIde.getRange(finderIde.getRow(), colIdEsp).getValue();
-      return obterEspacoPorId(idEsp);
+      const colAtual = ESPACO_IDENTIFICADORES_HEADERS.indexOf('ATUAL') + 1;
+      for (let i = 0; i < finders.length; i++) {
+        const row = finders[i].getRow();
+        const atual = String(shIde.getRange(row, colAtual).getValue() || '').trim().toUpperCase();
+        if (atual === 'SIM' || incluirHistorico) {
+          const idEsp = shIde.getRange(row, colIdEsp).getValue();
+          return obterEspacoPorId(idEsp);
+        }
+      }
     }
   }
 

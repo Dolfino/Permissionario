@@ -396,3 +396,642 @@ function promoverM2C1Demo(usuario) {
     lock.releaseLock();
   }
 }
+
+/**
+ * Retorna a aba CARTOGRAFIA_HISTORICO garantindo headers se necessário.
+ * @private
+ */
+function obterAbaCartografiaHistorico_() {
+  const ss = obterPlanilhaCartografiaCanonico_();
+  let sh = ss.getSheetByName('CARTOGRAFIA_HISTORICO');
+  if (!sh) {
+    sh = ss.insertSheet('CARTOGRAFIA_HISTORICO');
+    sh.getRange(1, 1, 1, S253_HIST_HEADERS.length).setValues([S253_HIST_HEADERS]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+/**
+ * 1. Backfill dos 9 eventos do M2C-1 em CARTOGRAFIA_HISTORICO.
+ * @param {string} [usuario]
+ * @returns {Object}
+ */
+function backfillM2C1HistoricoCartografico(usuario) {
+  const user = usuario || 'SISTEMA_M2C';
+  const shHist = obterAbaCartografiaHistorico_();
+  const lastRow = shHist.getLastRow();
+  
+  // Indexa eventos existentes para idempotência
+  const eventosExistentes = new Set();
+  if (lastRow > 1) {
+    const dados = shHist.getRange(2, 1, lastRow - 1, 4).getValues();
+    for (let r = 0; r < dados.length; r++) {
+      const tipo = String(dados[r][1] || '').trim();
+      const pino = String(dados[r][3] || '').trim();
+      if (tipo === 'M2C1_CORRECAO_LUC_DEMO') {
+        eventosExistentes.add(pino);
+      }
+    }
+  }
+
+  const eventosDemo9 = [
+    { pino: 'LMP-AM-AVALN-2228-D-2642-9530', lucReal: 'AVALN2228', lucDemo: 'LUC-DEMO-006', idEspaco: 'ESP-004780' },
+    { pino: 'LMP-AM-AVALN-2232-D-2461-9530', lucReal: 'AVALN2232', lucDemo: 'LUC-DEMO-005', idEspaco: 'ESP-004781' },
+    { pino: 'LMP-AZ-ADMMN-1172-D-1213-4879', lucReal: 'ADMMN1172', lucDemo: 'LUC-DEMO-002', idEspaco: 'ESP-004782' },
+    { pino: 'LMP-AZ-ADMMN-1176-D-1211-4727', lucReal: 'ADMMN1176', lucDemo: 'LUC-DEMO-001', idEspaco: 'ESP-004783' },
+    { pino: 'LMP-BR-RANPM-2105-2111-E-1589-1016', lucReal: 'RANPM2105', lucDemo: 'LUC-DEMO-008', idEspaco: 'ESP-004784' },
+    { pino: 'LMP-BR-APCBR-2110-E-8923-1158', lucReal: 'APCBR2110', lucDemo: 'LUC-DEMO-007', idEspaco: 'ESP-004785' },
+    { pino: 'LMP-RX-R2DMR-3320-E-2153-2308', lucReal: 'R2DMR3320', lucDemo: 'LUC-DEMO-010', idEspaco: 'ESP-004786' },
+    { pino: 'LMP-VD-APCBR-1104-E-8940-1128', lucReal: 'APCBR1104', lucDemo: 'LUC-DEMO-003', idEspaco: 'ESP-004787' },
+    { pino: 'LMP-VD-APCBR-1108-E-8940-1292', lucReal: 'APCBR1108', lucDemo: 'LUC-DEMO-004', idEspaco: 'ESP-004788' }
+  ];
+
+  const novasLinhas = [];
+  const agora = Utilities.formatDate(new Date(), ESPACOS_CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
+
+  for (const item of eventosDemo9) {
+    if (eventosExistentes.has(item.pino)) continue;
+
+    const idEvento = 'CART-HIST-' + Utilities.getUuid().replace(/-/g, '').slice(0, 16).toUpperCase();
+    const antesJson = JSON.stringify({
+      LUC: item.lucDemo,
+      ID_ESPACO: '',
+      PAPEL_REPRESENTACAO: '',
+      OBSERVACAO: ''
+    });
+    const depoisJson = JSON.stringify({
+      LUC: item.lucReal,
+      ID_ESPACO: item.idEspaco,
+      PAPEL_REPRESENTACAO: 'PRIMARIA',
+      OBSERVACAO: '[M2C-1] Migrado de teste DEMO (' + item.lucDemo + '). LUC real: ' + item.lucReal + '. Espaço ' + item.idEspaco + '.'
+    });
+
+    novasLinhas.push([
+      idEvento,
+      'M2C1_CORRECAO_LUC_DEMO',
+      'LOJAS_MAPA',
+      item.pino,
+      item.idEspaco,
+      'M2C-1',
+      antesJson,
+      depoisJson,
+      'M2C1_CORRECAO_LUC_DEMO: Correção e homologação do pino DEMO para ativo físico real',
+      user,
+      agora,
+      'MIGRACAO_M2C'
+    ]);
+  }
+
+  if (novasLinhas.length > 0) {
+    shHist.getRange(shHist.getLastRow() + 1, 1, novasLinhas.length, S253_HIST_HEADERS.length).setValues(novasLinhas);
+  }
+
+  return {
+    sucesso: true,
+    totalNovosEventos: novasLinhas.length,
+    jaExistentes: eventosDemo9.length - novasLinhas.length
+  };
+}
+
+/**
+ * 2. Resolve e vincula as 42 representações secundárias em LOJAS_MAPA e registra histórico.
+ * @param {string} [usuario]
+ * @returns {Object}
+ */
+function resolverSecundariasM2C11(usuario) {
+  const user = usuario || 'SISTEMA_M2C';
+  const shMapa = obterAbaLojasMapa_();
+  const shHist = obterAbaCartografiaHistorico_();
+  const lastRowMapa = shMapa.getLastRow();
+  if (lastRowMapa <= 1) return { sucesso: false, erro: 'LOJAS_MAPA vazia' };
+
+  const numCols = shMapa.getLastColumn();
+  const headers = shMapa.getRange(1, 1, 1, numCols).getValues()[0].map(h => String(h || '').trim());
+  const colIdPino = headers.indexOf('ID_LOJA_MAPA');
+  const colIdEspaco = headers.indexOf('ID_ESPACO');
+  const colPapel = headers.indexOf('PAPEL_REPRESENTACAO');
+  const colStatusRev = headers.indexOf('STATUS_REVISAO');
+  const colMotivoRev = headers.indexOf('MOTIVO_REVISAO');
+  const colRevPor = headers.indexOf('REVISADO_POR');
+  const colRevEm = headers.indexOf('REVISADO_EM');
+
+  const rangeDados = shMapa.getRange(2, 1, lastRowMapa - 1, numCols);
+  const dados = rangeDados.getValues();
+
+  // Carrega mapeamento das 42 secundárias
+  const pinosSecundarios42 = [
+    { id: 'LMP-AZ-RCRFR-1319-E-2562-0871', esp: 'ESP-002430' },
+    { id: 'LMP-AZ-RCRFR-1315-E-2562-1023', esp: 'ESP-002428' },
+    { id: 'LMP-AZ-RCRFR-1311-E-2562-1175', esp: 'ESP-001817' },
+    { id: 'LMP-AZ-RCRFR-1307-E-2562-1327', esp: 'ESP-001815' },
+    { id: 'LMP-AZ-RCRFR-1303-E-2562-1481', esp: 'ESP-001813' },
+    { id: 'LMP-AZ-RCRFR-1299-E-2562-1633', esp: 'ESP-002426' },
+    { id: 'LMP-AZ-RCRFR-1295-E-2562-1785', esp: 'ESP-002424' },
+    { id: 'LMP-AZ-RCRFR-1258-E-2612-3264', esp: 'ESP-002417' },
+    { id: 'LMP-VD-RPDPR-1239-E-4583-6985', esp: 'ESP-004641' },
+    { id: 'LMP-VD-RPDPR-1243-E-4583-7157', esp: 'ESP-004309' },
+    { id: 'LMP-VD-RPDPR-1247-E-4583-7328', esp: 'ESP-004311' },
+    { id: 'LMP-VD-RPDPR-1251-E-4583-7499', esp: 'ESP-004312' },
+    { id: 'LMP-VD-RPDPR-1255-E-4583-7671', esp: 'ESP-004313' },
+    { id: 'LMP-VD-RPDPR-1259-E-4583-7842', esp: 'ESP-004315' },
+    { id: 'LMP-VD-RPDPR-1263-E-4583-8013', esp: 'ESP-004645' },
+    { id: 'LMP-VD-RSNAL-1239-E-6981-6985', esp: 'ESP-004667' },
+    { id: 'LMP-VD-RSNAL-1243-E-6981-7157', esp: 'ESP-004346' },
+    { id: 'LMP-VD-RSNAL-1247-E-6981-7328', esp: 'ESP-004348' },
+    { id: 'LMP-VD-RSNAL-1251-E-6981-7499', esp: 'ESP-004350' },
+    { id: 'LMP-VD-RSNAL-1255-E-6981-7671', esp: 'ESP-004352' },
+    { id: 'LMP-VD-RSNAL-1259-E-6981-7842', esp: 'ESP-004354' },
+    { id: 'LMP-VD-RSNAL-1263-E-6981-8013', esp: 'ESP-004668' },
+    { id: 'LMP-AM-R2DMR-2318-E-1967-2407', esp: 'ESP-001233' },
+    { id: 'LMP-AM-R2DMR-2314-E-1967-2535', esp: 'ESP-001231' },
+    { id: 'LMP-AM-R2DMR-2310-E-1967-2664', esp: 'ESP-001229' },
+    { id: 'LMP-AM-R2DMR-2302-E-1967-2921', esp: 'ESP-001225' },
+    { id: 'LMP-AM-R2DMR-2294-E-1967-3178', esp: 'ESP-001221' },
+    { id: 'LMP-AM-R2DMR-2190-E-1970-6521', esp: 'ESP-000903' },
+    { id: 'LMP-AM-R2DMR-2186-E-1970-6650', esp: 'ESP-000901' },
+    { id: 'LMP-AM-R2DMR-2182-E-1971-6778', esp: 'ESP-000899' },
+    { id: 'LMP-AM-R2DMR-2174-E-1970-7035', esp: 'ESP-000895' },
+    { id: 'LMP-AM-R2DMR-2170-E-1970-7164', esp: 'ESP-000893' },
+    { id: 'LMP-AM-R2DMR-2166-E-1970-7293', esp: 'ESP-000891' },
+    { id: 'LMP-AM-R2DMR-2154-E-1971-7678', esp: 'ESP-000885' },
+    { id: 'LMP-AM-R2DMR-2150-E-1971-7807', esp: 'ESP-000883' },
+    { id: 'LMP-AM-RCNDD-2204-E-3788-6071', esp: 'ESP-000957' },
+    { id: 'LMP-AM-RGNSM-2146-E-6515-7935', esp: 'ESP-001030' },
+    { id: 'LMP-AM-RJSA-2122-E-1284-8733', esp: 'ESP-001593' },
+    { id: 'LMP-AM-RSNPM-2156-E-6061-7613', esp: 'ESP-001133' },
+    { id: 'LMP-BR-RLBBR-2131-E-5093-2150', esp: 'ESP-002964' },
+    { id: 'LMP-BR-TVPR-2191-E-3679-4254', esp: 'ESP-002978' },
+    { id: 'LMP-RX-RJSA-3122-E-1452-8638', esp: 'ESP-004017' }
+  ];
+
+  const mapSec = new Map();
+  pinosSecundarios42.forEach(s => mapSec.set(s.id, s.esp));
+
+  const agora = Utilities.formatDate(new Date(), ESPACOS_CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
+  const eventosHist = [];
+  let vinculados = 0;
+
+  for (let r = 0; r < dados.length; r++) {
+    const idPino = String(dados[r][colIdPino] || '').trim();
+    if (mapSec.has(idPino)) {
+      const idEsp = mapSec.get(idPino);
+      const antesStatus = dados[r][colStatusRev] || '';
+      const antesMotivo = dados[r][colMotivoRev] || '';
+
+      // Atualiza LOJAS_MAPA
+      dados[r][colIdEspaco] = idEsp;
+      dados[r][colPapel] = 'SECUNDARIA';
+      dados[r][colStatusRev] = 'SECUNDARIA_CONFIRMADA';
+      dados[r][colMotivoRev] = 'SEGUNDA_FACE_ACESSO_CORREDOR';
+      dados[r][colRevPor] = user;
+      dados[r][colRevEm] = agora;
+
+      // Evento histórico
+      const idEvento = 'CART-HIST-' + Utilities.getUuid().replace(/-/g, '').slice(0, 16).toUpperCase();
+      const antesJson = JSON.stringify({
+        ID_ESPACO: '',
+        PAPEL_REPRESENTACAO: '',
+        STATUS_REVISAO: antesStatus,
+        MOTIVO_REVISAO: antesMotivo
+      });
+      const depoisJson = JSON.stringify({
+        ID_ESPACO: idEsp,
+        PAPEL_REPRESENTACAO: 'SECUNDARIA',
+        STATUS_REVISAO: 'SECUNDARIA_CONFIRMADA',
+        MOTIVO_REVISAO: 'SEGUNDA_FACE_ACESSO_CORREDOR'
+      });
+
+      eventosHist.push([
+        idEvento,
+        'VINCULO_SECUNDARIA',
+        'LOJAS_MAPA',
+        idPino,
+        idEsp,
+        'M2C-1.1',
+        antesJson,
+        depoisJson,
+        'Vinculação de representação secundária (segunda face/acesso) ao espaço físico canônico já existente',
+        user,
+        agora,
+        'FECHAMENTO_M2C1_1'
+      ]);
+
+      vinculados++;
+    }
+  }
+
+  // Grava LOJAS_MAPA
+  rangeDados.setValues(dados);
+
+  // Grava CARTOGRAFIA_HISTORICO
+  if (eventosHist.length > 0) {
+    shHist.getRange(shHist.getLastRow() + 1, 1, eventosHist.length, S253_HIST_HEADERS.length).setValues(eventosHist);
+  }
+
+  return {
+    sucesso: true,
+    totalVinculados: vinculados,
+    totalEventosGravados: eventosHist.length
+  };
+}
+
+/**
+ * 3. Persiste a governança nos 140 pinos restantes em LOJAS_MAPA.
+ * @param {string} [usuario]
+ * @returns {Object}
+ */
+function persistirGovernancaPinosRestantesM2C11(usuario) {
+  const user = usuario || 'SISTEMA_M2C';
+  const shMapa = obterAbaLojasMapa_();
+  const lastRowMapa = shMapa.getLastRow();
+  if (lastRowMapa <= 1) return { sucesso: false, erro: 'LOJAS_MAPA vazia' };
+
+  const numCols = shMapa.getLastColumn();
+  const headers = shMapa.getRange(1, 1, 1, numCols).getValues()[0].map(h => String(h || '').trim());
+  const colIdPino = headers.indexOf('ID_LOJA_MAPA');
+  const colIdEspaco = headers.indexOf('ID_ESPACO');
+  const colStatusRev = headers.indexOf('STATUS_REVISAO');
+  const colMotivoRev = headers.indexOf('MOTIVO_REVISAO');
+  const colRevPor = headers.indexOf('REVISADO_POR');
+  const colRevEm = headers.indexOf('REVISADO_EM');
+
+  const rangeDados = shMapa.getRange(2, 1, lastRowMapa - 1, numCols);
+  const dados = rangeDados.getValues();
+
+  const agora = Utilities.formatDate(new Date(), ESPACOS_CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
+  let atualizados = 0;
+  const contagem = {};
+
+  for (let r = 0; r < dados.length; r++) {
+    const idPino = String(dados[r][colIdPino] || '').trim();
+    const idEsp = String(dados[r][colIdEspaco] || '').trim();
+
+    // Apenas pinos que ainda NÃO possuem ID_ESPACO (os 140 restantes)
+    if (!idEsp) {
+      let statusNovo = '';
+      let motivoNovo = '';
+
+      // 1. Pino experimental DEMO descontinuado
+      if (idPino === 'LMP-RX-AVCRP-3143-E-8406-8036') {
+        statusNovo = 'DEMO_DESCONTINUADO';
+        motivoNovo = 'PINO_EXPERIMENTAL_SEM_ATIVO';
+      }
+      // 2. Erro sistemático AVALN1106
+      else if (idPino.includes('AVALN-1106')) {
+        statusNovo = 'ERRO_IDENTIFICACAO';
+        motivoNovo = 'ERRO_SISTEMATICO_OCR_PDF';
+      }
+      // 3. Duplicidades imobiliárias conhecidas
+      else if (idPino.includes('ADMMN-1262') || idPino.includes('RGVSM-2277')) {
+        statusNovo = 'REQUER_REVISAO';
+        motivoNovo = 'DUPLICIDADE_BASE_IMOBILIARIA';
+      }
+      // 4. Representações compostas / vértices de megalojas
+      else if (
+        idPino.includes('RJSA-3112') ||
+        idPino.includes('RJSA-3108') ||
+        idPino.includes('AVDMO-2159') ||
+        idPino.includes('AVDMO-2160')
+      ) {
+        statusNovo = 'COMPOSTA_PENDENTE';
+        motivoNovo = 'MULTI_VERTICE_MEGALOJA';
+      }
+      // 5. Duplicidades cartográficas
+      else if (dados[r][colStatusRev] === 'DUPLICIDADE_POSSIVEL' || dados[r][colMotivoRev] === 'MESMO_SETOR_CORREDOR_LADO_NUMERO') {
+        statusNovo = 'DUPLICIDADE_CARTOGRAFICA';
+        motivoNovo = 'SOBREPOSICAO_MESMO_CORREDOR_LADO_NUMERO';
+      }
+      // 6. Sem ativo cadastral (extrações de PDF sem correspondente imobiliário)
+      else {
+        statusNovo = 'SEM_ATIVO_CADASTRAL';
+        motivoNovo = 'EXTRACAO_PDF_SEM_CORRESPONDENTE';
+      }
+
+      dados[r][colStatusRev] = statusNovo;
+      dados[r][colMotivoRev] = motivoNovo;
+      dados[r][colRevPor] = user;
+      dados[r][colRevEm] = agora;
+
+      contagem[statusNovo] = (contagem[statusNovo] || 0) + 1;
+      atualizados++;
+    }
+  }
+
+  rangeDados.setValues(dados);
+
+  return {
+    sucesso: true,
+    totalAtualizados: atualizados,
+    distribuicao: contagem
+  };
+}
+
+/**
+ * 4. Orquestrador completo do Fechamento M2C-1.1
+ * Executa as 3 etapas de fechamento cartográfico.
+ * @param {string} [usuario]
+ * @returns {Object}
+ */
+function executarFechamentoM2C11(usuario) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(ESPACOS_CONFIG.LOCK_TIMEOUT_MS)) {
+    throw new Error('CONCORRENCIA_DETECTADA: Não foi possível obter trava para o Fechamento M2C-1.1.');
+  }
+
+  try {
+    const user = usuario || 'SISTEMA_M2C';
+    const resBackfill = backfillM2C1HistoricoCartografico(user);
+    const resSecundarias = resolverSecundariasM2C11(user);
+    const resGovernanca = persistirGovernancaPinosRestantesM2C11(user);
+
+    return {
+      sucesso: true,
+      milestone: 'M2C-1.1',
+      executadoEm: new Date().toISOString(),
+      executadoPor: user,
+      backfillHistorico: resBackfill,
+      secundarias: resSecundarias,
+      governancaRestantes: resGovernanca
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Inspeciona as tabelas canônicas reais dos bancos CADASTRO360 e FINANCEIRO.
+ */
+function inspecionarTabelasFontesReaisM2C2_() {
+  const idCad = '1pzCRZ2799jKCGWFJETjLz2TjVs2JkIs1iYQV468HZNA';
+  const idFin = '1f9-I94mjByCnoKXKBSSQPUL5ZdnHiYnmuZDmWKoeiN0';
+  
+  const ssCad = SpreadsheetApp.openById(idCad);
+  const ssFin = SpreadsheetApp.openById(idFin);
+
+  function getInfo(ss, aba) {
+    const sh = ss.getSheetByName(aba);
+    if (!sh || sh.getLastRow() < 1) return { existe: false };
+    const h = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(v => String(v || '').trim());
+    let sample = [];
+    if (sh.getLastRow() >= 2) {
+      sample = sh.getRange(2, 1, Math.min(2, sh.getLastRow() - 1), h.length).getValues();
+    }
+    return {
+      existe: true,
+      linhas: sh.getLastRow(),
+      colunas: h,
+      amostra: sample
+    };
+  }
+
+  return {
+    lojas: getInfo(ssCad, 'LOJAS'),
+    permissionarios: getInfo(ssCad, 'PERMISSIONARIOS'),
+    ocupacoes: getInfo(ssCad, 'OCUPACOES'),
+    contratos: getInfo(ssFin, 'CONTRATOS'),
+    contratoEspacos: getInfo(ssFin, 'CONTRATO_ESPACOS')
+  };
+}
+
+/**
+ * Extrai dados brutos de tabelas canônicas para auditoria e joins multi-fonte.
+ * @param {string} tabela Nome da tabela canônica
+ * @returns {Object}
+ */
+function extrairTabelaCanonicaM2C2_(tabela) {
+  const bancos = {
+    LOJAS: '1pzCRZ2799jKCGWFJETjLz2TjVs2JkIs1iYQV468HZNA',
+    PERMISSIONARIOS: '1pzCRZ2799jKCGWFJETjLz2TjVs2JkIs1iYQV468HZNA',
+    OCUPACOES: '1pzCRZ2799jKCGWFJETjLz2TjVs2JkIs1iYQV468HZNA',
+    CONTRATOS: '1f9-I94mjByCnoKXKBSSQPUL5ZdnHiYnmuZDmWKoeiN0',
+    CONTRATO_ESPACOS: '1f9-I94mjByCnoKXKBSSQPUL5ZdnHiYnmuZDmWKoeiN0',
+    REGISTROS: '1j5bYY-0JpbLd95FyV19lyRPSG6j9kpoM8UCCWZjKchs',
+    CORREDORES: '1j5bYY-0JpbLd95FyV19lyRPSG6j9kpoM8UCCWZjKchs',
+    MAPA_AREAS_NIVEL: '1j5bYY-0JpbLd95FyV19lyRPSG6j9kpoM8UCCWZjKchs'
+  };
+
+  const idSs = bancos[tabela];
+  if (!idSs) throw new Error('Tabela desconhecida: ' + tabela);
+
+  const ss = SpreadsheetApp.openById(idSs);
+  const sh = ss.getSheetByName(tabela);
+  if (!sh) throw new Error('Aba não encontrada: ' + tabela);
+
+  const lastRow = sh.getLastRow();
+  const lastCol = sh.getLastColumn();
+  if (lastRow < 1 || lastCol < 1) {
+    return { sucesso: true, tabela, totalLinhas: 0, colunas: [], linhas: [] };
+  }
+
+  const values = sh.getRange(1, 1, lastRow, lastCol).getValues();
+  const colunas = values[0].map(c => String(c || '').trim());
+  const linhas = values.slice(1);
+
+  return {
+    sucesso: true,
+    tabela,
+    totalLinhas: linhas.length,
+    colunas,
+    linhas
+  };
+}
+
+const M2C_DIAGNOSTICO_HEADERS = Object.freeze([
+  'ID_STAGING',
+  'LUC_LEGADO',
+  'STATUS_IDENTIDADE_FISICA',
+  'STATUS_IDENTIFICADOR',
+  'CLASSE_ATIVO_FISICO',
+  'STATUS_CARTOGRAFICO',
+  'CORREDOR_OFICIAL',
+  'FONTES_EVIDENCIA',
+  'CONTRADICOES',
+  'JUSTIFICATIVA',
+  'ELEGIVEL_VISTORIA',
+  'VERSAO_REGRA',
+  'ID_EXECUCAO_DIAGNOSTICO',
+  'HASH_FONTE',
+  'DIAGNOSTICADO_EM',
+  'DIAGNOSTICADO_POR',
+  'ATUALIZADO_EM'
+]);
+
+const M2C_DIAGNOSTICO_HISTORICO_HEADERS = Object.freeze([
+  'ID_HISTORICO_DIAGNOSTICO',
+  'ID_EXECUCAO_DIAGNOSTICO',
+  'ID_STAGING',
+  'LUC_LEGADO',
+  'STATUS_IDENTIDADE_FISICA',
+  'STATUS_IDENTIFICADOR',
+  'CLASSE_ATIVO_FISICO',
+  'STATUS_CARTOGRAFICO',
+  'CORREDOR_OFICIAL',
+  'FONTES_EVIDENCIA',
+  'CONTRADICOES',
+  'JUSTIFICATIVA',
+  'ELEGIVEL_VISTORIA',
+  'VERSAO_REGRA',
+  'HASH_FONTE',
+  'REGISTRADO_EM',
+  'REGISTRADO_POR'
+]);
+
+/**
+ * Persiste as classificações dos 4 eixos do M2C-2B-1 na aba canônica ESPACOS_M2C_DIAGNOSTICO
+ * e registra snapshot imutável em ESPACOS_M2C_DIAGNOSTICO_HISTORICO.
+ *
+ * @param {Array<Object>} registros Lista de 1.106 objetos classificados nos 4 eixos
+ * @param {string} [versaoRegra='M2C-2B-1'] Versão da regra aplicada
+ * @param {string} [idExecucao] ID da execução diagnóstica (ex: EXEC-M2C2B1-...)
+ * @param {string} [hashFonte] Hash SHA-256 da base de dados de entrada
+ * @param {string} [usuario] Usuário responsável
+ * @returns {Object}
+ */
+function persistirDiagnostico4EixosM2C_(registros, versaoRegra, idExecucao, hashFonte, usuario) {
+  const user = usuario || 'SISTEMA_M2C2B1';
+  const regra = versaoRegra || 'M2C-2B-1';
+  const agora = Utilities.formatDate(new Date(), ESPACOS_CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
+  const execId = idExecucao || ('EXEC-' + Utilities.formatDate(new Date(), ESPACOS_CONFIG.TIMEZONE, 'yyyyMMdd-HHmmss') + '-' + Utilities.getUuid().slice(0, 6).toUpperCase());
+  const hash = hashFonte || 'SHA256_BASE_LOJISTAS_1106_CANONICO';
+
+  const ss = obterPlanilhaEspacosCanonico_();
+
+  // 1. Aba ESPACOS_M2C_DIAGNOSTICO (Estado Corrente)
+  let shDiag = ss.getSheetByName('ESPACOS_M2C_DIAGNOSTICO');
+  if (!shDiag) {
+    shDiag = ss.insertSheet('ESPACOS_M2C_DIAGNOSTICO');
+    shDiag.getRange(1, 1, 1, M2C_DIAGNOSTICO_HEADERS.length).setValues([M2C_DIAGNOSTICO_HEADERS]);
+    shDiag.setFrozenRows(1);
+  } else {
+    // Garante que cabeçalhos estão atualizados
+    shDiag.getRange(1, 1, 1, M2C_DIAGNOSTICO_HEADERS.length).setValues([M2C_DIAGNOSTICO_HEADERS]);
+  }
+
+  const linhasDiag = registros.map(r => [
+    r.ID_STAGING,
+    r.LUC_LEGADO,
+    r.STATUS_IDENTIDADE_FISICA,
+    r.STATUS_IDENTIFICADOR,
+    r.CLASSE_ATIVO_FISICO,
+    r.STATUS_CARTOGRAFICO,
+    r.CORREDOR_OFICIAL || '',
+    Array.isArray(r.FONTES_EVIDENCIA) ? r.FONTES_EVIDENCIA.join('; ') : String(r.FONTES_EVIDENCIA || ''),
+    Array.isArray(r.CONTRADICOES) ? r.CONTRADICOES.join('; ') : String(r.CONTRADICOES || ''),
+    r.JUSTIFICATIVA || '',
+    r.ELEGIVEL_VISTORIA || 'NAO',
+    regra,
+    execId,
+    hash,
+    agora,
+    user,
+    agora
+  ]);
+
+  const lastRow = shDiag.getLastRow();
+  if (lastRow > 1) {
+    shDiag.getRange(2, 1, lastRow - 1, M2C_DIAGNOSTICO_HEADERS.length).clearContent();
+  }
+  shDiag.getRange(2, 1, linhasDiag.length, M2C_DIAGNOSTICO_HEADERS.length).setValues(linhasDiag);
+
+  // 2. Aba ESPACOS_M2C_DIAGNOSTICO_HISTORICO (Append-Only Eventos)
+  let shHist = ss.getSheetByName('ESPACOS_M2C_DIAGNOSTICO_HISTORICO');
+  if (!shHist) {
+    shHist = ss.insertSheet('ESPACOS_M2C_DIAGNOSTICO_HISTORICO');
+    shHist.getRange(1, 1, 1, M2C_DIAGNOSTICO_HISTORICO_HEADERS.length).setValues([M2C_DIAGNOSTICO_HISTORICO_HEADERS]);
+    shHist.setFrozenRows(1);
+  }
+
+  let maxHistId = 0;
+  const lastRowHist = shHist.getLastRow();
+  if (lastRowHist > 1) {
+    const idsExistentes = shHist.getRange(2, 1, lastRowHist - 1, 1).getValues();
+    idsExistentes.forEach(v => {
+      const m = String(v[0] || '').match(/^DGH-(\d+)$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxHistId) maxHistId = n;
+      }
+    });
+  }
+
+  const linhasHist = registros.map(r => {
+    maxHistId++;
+    return [
+      'DGH-' + String(maxHistId).padStart(6, '0'),
+      execId,
+      r.ID_STAGING,
+      r.LUC_LEGADO,
+      r.STATUS_IDENTIDADE_FISICA,
+      r.STATUS_IDENTIFICADOR,
+      r.CLASSE_ATIVO_FISICO,
+      r.STATUS_CARTOGRAFICO,
+      r.CORREDOR_OFICIAL || '',
+      Array.isArray(r.FONTES_EVIDENCIA) ? r.FONTES_EVIDENCIA.join('; ') : String(r.FONTES_EVIDENCIA || ''),
+      Array.isArray(r.CONTRADICOES) ? r.CONTRADICOES.join('; ') : String(r.CONTRADICOES || ''),
+      r.JUSTIFICATIVA || '',
+      r.ELEGIVEL_VISTORIA || 'NAO',
+      regra,
+      hash,
+      agora,
+      user
+    ];
+  });
+
+  if (linhasHist.length > 0) {
+    shHist.getRange(lastRowHist + 1, 1, linhasHist.length, M2C_DIAGNOSTICO_HISTORICO_HEADERS.length).setValues(linhasHist);
+  }
+
+  // 3. Sincroniza metadados dos 4 eixos em ESPACOS_MIGRACAO_STAGING
+  let atualizadosStg = 0;
+  const shStg = obterAbaEspacosStaging_();
+  const lastRowStg = shStg.getLastRow();
+  if (lastRowStg > 1) {
+    const rangeStg = shStg.getRange(2, 1, lastRowStg - 1, ESPACOS_STAGING_HEADERS.length);
+    const dadosStg = rangeStg.getValues();
+    const colIdStg = ESPACOS_STAGING_HEADERS.indexOf('ID_STAGING');
+    const colDiag = ESPACOS_STAGING_HEADERS.indexOf('DIAGNOSTICO');
+    const colConfIdent = ESPACOS_STAGING_HEADERS.indexOf('CONFIANCA_IDENTIDADE');
+    const colObs = ESPACOS_STAGING_HEADERS.indexOf('OBSERVACAO_REVISAO');
+    
+    const mapaReg = new Map();
+    registros.forEach(r => mapaReg.set(r.ID_STAGING, r));
+
+    for (let i = 0; i < dadosStg.length; i++) {
+      const idStg = String(dadosStg[i][colIdStg] || '').trim();
+      if (mapaReg.has(idStg)) {
+        const r = mapaReg.get(idStg);
+        dadosStg[i][colDiag] = r.STATUS_IDENTIDADE_FISICA;
+        dadosStg[i][colConfIdent] = r.STATUS_IDENTIDADE_FISICA;
+        dadosStg[i][colObs] = '[' + regra + '] Eixo A: ' + r.STATUS_IDENTIDADE_FISICA +
+          ' | Eixo B: ' + r.STATUS_IDENTIFICADOR +
+          ' | Eixo C: ' + r.CLASSE_ATIVO_FISICO +
+          ' | Eixo D: ' + r.STATUS_CARTOGRAFICO + ' (candidato sem representação vinculada). ' + r.JUSTIFICATIVA;
+        atualizadosStg++;
+      }
+    }
+    if (atualizadosStg > 0) {
+      rangeStg.setValues(dadosStg);
+    }
+  }
+
+  return {
+    sucesso: true,
+    totalPersistidos: linhasDiag.length,
+    totalHistoricoAppended: linhasHist.length,
+    totalAtualizadosStaging: atualizadosStg,
+    idExecucao: execId,
+    versaoRegra: regra,
+    hashFonte: hash,
+    planilha: ss.getId(),
+    aba: 'ESPACOS_M2C_DIAGNOSTICO',
+    abaHistorico: 'ESPACOS_M2C_DIAGNOSTICO_HISTORICO',
+    atualizadoEm: agora,
+    atualizadoPor: user
+  };
+}
+
+
+
+
+

@@ -17,6 +17,41 @@ const APP = Object.freeze({
 });
 
 function doGet(e) {
+  if (e && e.parameter && (e.parameter.view === 'campo' || e.parameter.app === 'vistoria')) {
+    return HtmlService.createTemplateFromFile('campo').evaluate()
+      .setTitle('CEOP — Vistoria de Campo Mobile (M2C-2B-2)')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1');
+  }
+
+  if (e && e.parameter && e.parameter.api === 'sessao_usuario') {
+    try {
+      const res = typeof obterSessaoUsuarioVistoria === 'function' ? obterSessaoUsuarioVistoria() : { ok: false };
+      return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  if (e && e.parameter && e.parameter.api === 'listar_candidatos_vistoria') {
+    try {
+      const apenasCanario = e.parameter.canario !== 'false';
+      const res = listarCandidatosVistoriaM2C(apenasCanario);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, candidatos: res }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  if (e && e.parameter && e.parameter.api === 'candidato_vistoria') {
+    try {
+      const idStg = e.parameter.idStaging;
+      const res = obterCandidatoParaVistoriaM2C(idStg);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, candidato: res }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   if (e && e.parameter && e.parameter.admin === 'sync_boxes_roxo') {
     try {
       const res = typeof inserirBoxesIlhaCentralSetorRoxo === 'function' ? inserirBoxesIlhaCentralSetorRoxo() : { ok: false, error: 'Função não encontrada' };
@@ -167,6 +202,117 @@ function doPost(e) {
       const res = promoverM2C1Demo(user);
       return ContentService.createTextOutput(JSON.stringify({ sucesso: true, resultado: res }, null, 2)).setMimeType(ContentService.MimeType.JSON);
     }
+
+    if (action === 'fechamento_m2c11') {
+      const user = payload.usuario || 'SISTEMA_M2C11';
+      const res = executarFechamentoM2C11(user);
+      return ContentService.createTextOutput(JSON.stringify({ sucesso: true, resultado: res }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'inspecionar_bancos_gestao') {
+      try {
+        const coreId = '1lGPTk1dFNmbb1xinCVxznYdB3e4qRIrlTs18bDh32Rs';
+        const ss = SpreadsheetApp.openById(coreId);
+        const sh = ss.getSheetByName('INDICE_BANCOS');
+        if (!sh) return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Aba INDICE_BANCOS não encontrada' })).setMimeType(ContentService.MimeType.JSON);
+        const vals = sh.getDataRange().getValues();
+        const headers = vals[0].map(h => String(h || '').trim());
+        const rows = vals.slice(1).map(r => Object.fromEntries(headers.map((h, i) => [h, r[i]])));
+        return ContentService.createTextOutput(JSON.stringify({ ok: true, bancos: rows }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'inspecionar_fontes_m2c2') {
+      try {
+        const res = inspecionarTabelasFontesReaisM2C2_();
+        return ContentService.createTextOutput(JSON.stringify({ ok: true, resultado: res }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'extrair_tabela_canonica') {
+      try {
+        const tab = payload.tabela;
+        const res = extrairTabelaCanonicaM2C2_(tab);
+        return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: String(err?.message || err) })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'persistir_diagnostico_m2c') {
+      try {
+        const regs = payload.registros || [];
+        const user = payload.usuario || 'SISTEMA_M2C2B1';
+        const versaoRegra = payload.versaoRegra || 'M2C-2B-1';
+        const idExec = payload.idExecucao;
+        const hash = payload.hashFonte;
+        const res = persistirDiagnostico4EixosM2C_(regs, versaoRegra, idExec, hash, user);
+        return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: String(err?.message || err) })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'setup_validacoes_campo') {
+      try {
+        const res = setupValidacoesCampoM2C();
+        return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'sessao_usuario') {
+      try {
+        const res = typeof obterSessaoUsuarioVistoria === 'function' ? obterSessaoUsuarioVistoria() : { ok: false };
+        return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'submeter_validacao_campo') {
+      try {
+        const res = submeterValidacaoCampoM2C(payload);
+        return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'homologar_validacao_campo') {
+      try {
+        const res = homologarValidacaoCampoM2C(payload);
+        return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'validar_gate_promocao_pos_vistoria') {
+      try {
+        const user = payload.usuario || 'ADMIN';
+        const res = validarGatePromocaoPosVistoriaM2C(payload.idStaging, payload.idValidacao, user);
+        return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === 'testes_negativos_gate') {
+      try {
+        const res = typeof executarTestesNegativosGateM2C === 'function' ? executarTestesNegativosGateM2C() : { ok: false };
+        return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+
 
     if (action === 'auditoria_6way') {
       const shEsp = obterAbaEspacos_();

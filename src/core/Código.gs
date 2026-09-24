@@ -197,6 +197,7 @@ function doPost(e) {
       const colStatus = ESPACOS_STAGING_HEADERS.indexOf('STATUS_MIGRACAO');
       const colIdEspaco = ESPACOS_STAGING_HEADERS.indexOf('ID_ESPACO_GERADO');
       const colGrau = ESPACOS_STAGING_HEADERS.indexOf('GRAU_CONFIANCA');
+      const colHash = ESPACOS_STAGING_HEADERS.indexOf('HASH_ORIGEM');
       const filtrados = [];
       for (let r = 0; r < data.length; r++) {
         const chMig = String(data[r][colChaveMig] || '').trim();
@@ -214,12 +215,44 @@ function doPost(e) {
             setor: String(data[r][colSetor] || '').trim(),
             idLojaMapa: String(data[r][colPino] || '').trim(),
             grauConfianca: String(data[r][colGrau] || '').trim(),
+            hashOrigem: String(data[r][colHash] || '').trim(),
             statusMigracao: st,
             idEspacoGerado: String(data[r][colIdEspaco] || '').trim()
           });
         }
       }
       return ContentService.createTextOutput(JSON.stringify({ sucesso: true, total: filtrados.length, registros: filtrados })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'reparar_ledger_id_staging') {
+      const shStg = obterAbaEspacosStaging_();
+      const shLed = obterAbaEspacosLedger_();
+      const lastStg = shStg.getLastRow();
+      const lastLed = shLed.getLastRow();
+      if (lastLed > 1 && lastStg > 1) {
+        const dataStg = shStg.getRange(2, 1, lastStg - 1, ESPACOS_STAGING_HEADERS.length).getValues();
+        const mapChaveToIdStg = new Map();
+        const colChaveStg = ESPACOS_STAGING_HEADERS.indexOf('CHAVE_MIGRACAO_ORIGEM');
+        const colIdStg = ESPACOS_STAGING_HEADERS.indexOf('ID_STAGING');
+        for (let r = 0; r < dataStg.length; r++) {
+          mapChaveToIdStg.set(String(dataStg[r][colChaveStg] || '').trim(), String(dataStg[r][colIdStg] || '').trim());
+        }
+
+        const dataLed = shLed.getRange(2, 1, lastLed - 1, ESPACOS_LEDGER_HEADERS.length).getValues();
+        const colChaveLed = ESPACOS_LEDGER_HEADERS.indexOf('CHAVE_MIGRACAO_ORIGEM');
+        const colIdStgLed = ESPACOS_LEDGER_HEADERS.indexOf('ID_STAGING');
+        let corrigidos = 0;
+        for (let r = 0; r < dataLed.length; r++) {
+          const ch = String(dataLed[r][colChaveLed] || '').trim();
+          if (mapChaveToIdStg.has(ch)) {
+            dataLed[r][colIdStgLed] = mapChaveToIdStg.get(ch);
+            corrigidos++;
+          }
+        }
+        shLed.getRange(2, 1, dataLed.length, ESPACOS_LEDGER_HEADERS.length).setValues(dataLed);
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: true, corrigidos })).setMimeType(ContentService.MimeType.JSON);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ sucesso: true, corrigidos: 0 })).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (action === 'auditoria_6way_completa') {

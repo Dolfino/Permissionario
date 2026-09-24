@@ -833,7 +833,7 @@ function promoverLoteStagingEmBloco(idsStaging, usuario) {
           String(getValRow(row, 'ID_SNAPSHOT_ORIGEM') || ESPACOS_CONFIG.SNAPSHOT_ORIGEM_PADRAO).trim(),
           String(getValRow(row, 'ID_REGISTRO_ORIGEM') || '').trim(),
           chaveMig,
-          item.idStaging,
+          String(getValRow(row, 'ID_STAGING') || item.idStaging).trim(),
           idEspaco,
           luc,
           setor,

@@ -673,9 +673,16 @@ function promoverLoteStagingEmBloco(idsStaging, usuario) {
     const dadosStg = shStg.getRange(2, 1, lastRowStg - 1, ESPACOS_STAGING_HEADERS.length).getValues();
     const mapaStgPorId = new Map();
     const colIdStg = ESPACOS_STAGING_HEADERS.indexOf('ID_STAGING');
+    const colChaveMig = ESPACOS_STAGING_HEADERS.indexOf('CHAVE_MIGRACAO_ORIGEM');
+    const colIdReg = ESPACOS_STAGING_HEADERS.indexOf('ID_REGISTRO_ORIGEM');
     for (let r = 0; r < dadosStg.length; r++) {
+      const entry = { rowIdx: r, rowNum: r + 2, data: dadosStg[r], modificado: false };
       const id = String(dadosStg[r][colIdStg] || '').trim();
-      if (id) mapaStgPorId.set(id, { rowIdx: r, rowNum: r + 2, data: dadosStg[r], modificado: false });
+      const chMig = String(dadosStg[r][colChaveMig] || '').trim();
+      const idReg = String(dadosStg[r][colIdReg] || '').trim();
+      if (id) mapaStgPorId.set(id, entry);
+      if (chMig) mapaStgPorId.set(chMig, entry);
+      if (idReg) mapaStgPorId.set(idReg, entry);
     }
 
     const shEsp = obterAbaEspacos_();

@@ -181,6 +181,143 @@ function doPost(e) {
       }, null, 2)).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (action === 'consultar_staging') {
+      const shStg = obterAbaEspacosStaging_();
+      const lastRow = shStg.getLastRow();
+      if (lastRow <= 1) return ContentService.createTextOutput(JSON.stringify({ sucesso: true, total: 0, registros: [] })).setMimeType(ContentService.MimeType.JSON);
+      const chavesBusca = payload.chaves ? new Set(payload.chaves) : null;
+      const statusFiltro = payload.status || null;
+      const data = shStg.getRange(2, 1, lastRow - 1, ESPACOS_STAGING_HEADERS.length).getValues();
+      const colChaveMig = ESPACOS_STAGING_HEADERS.indexOf('CHAVE_MIGRACAO_ORIGEM');
+      const colIdReg = ESPACOS_STAGING_HEADERS.indexOf('ID_REGISTRO_ORIGEM');
+      const colIdStg = ESPACOS_STAGING_HEADERS.indexOf('ID_STAGING');
+      const colLuc = ESPACOS_STAGING_HEADERS.indexOf('LUC_LEGADO');
+      const colSetor = ESPACOS_STAGING_HEADERS.indexOf('SETOR_LEGADO');
+      const colPino = ESPACOS_STAGING_HEADERS.indexOf('ID_LOJA_MAPA');
+      const colStatus = ESPACOS_STAGING_HEADERS.indexOf('STATUS_MIGRACAO');
+      const colIdEspaco = ESPACOS_STAGING_HEADERS.indexOf('ID_ESPACO_GERADO');
+      const colGrau = ESPACOS_STAGING_HEADERS.indexOf('GRAU_CONFIANCA');
+      const filtrados = [];
+      for (let r = 0; r < data.length; r++) {
+        const chMig = String(data[r][colChaveMig] || '').trim();
+        const idReg = String(data[r][colIdReg] || '').trim();
+        const idStg = String(data[r][colIdStg] || '').trim();
+        const st = String(data[r][colStatus] || '').trim();
+        const matchChave = !chavesBusca || chavesBusca.has(chMig) || chavesBusca.has(idReg) || chavesBusca.has(idStg);
+        const matchStatus = !statusFiltro || st === statusFiltro;
+        if (matchChave && matchStatus) {
+          filtrados.push({
+            idStaging: idStg,
+            chaveMigracaoOrigem: chMig,
+            idRegistroOrigem: idReg,
+            luc: String(data[r][colLuc] || '').trim(),
+            setor: String(data[r][colSetor] || '').trim(),
+            idLojaMapa: String(data[r][colPino] || '').trim(),
+            grauConfianca: String(data[r][colGrau] || '').trim(),
+            statusMigracao: st,
+            idEspacoGerado: String(data[r][colIdEspaco] || '').trim()
+          });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ sucesso: true, total: filtrados.length, registros: filtrados })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'auditoria_6way_completa') {
+      const shEsp = obterAbaEspacos_();
+      const shIdent = obterAbaEspacoIdentificadores_();
+      const shStg = obterAbaEspacosStaging_();
+      const shLedger = obterAbaEspacosLedger_();
+      const shMapa = obterAbaLojasMapa_();
+
+      const lastEsp = shEsp.getLastRow();
+      const lastIdent = shIdent.getLastRow();
+      const lastStg = shStg.getLastRow();
+      const lastLedger = shLedger.getLastRow();
+      const lastMapa = shMapa.getLastRow();
+
+      const dataEsp = lastEsp > 1 ? shEsp.getRange(2, 1, lastEsp - 1, ESPACOS_HEADERS.length).getValues() : [];
+      const dataIdent = lastIdent > 1 ? shIdent.getRange(2, 1, lastIdent - 1, ESPACO_IDENTIFICADORES_HEADERS.length).getValues() : [];
+      const dataLed = lastLedger > 1 ? shLedger.getRange(2, 1, lastLedger - 1, ESPACOS_LEDGER_HEADERS.length).getValues() : [];
+      const dataStg = lastStg > 1 ? shStg.getRange(2, 1, lastStg - 1, ESPACOS_STAGING_HEADERS.length).getValues() : [];
+      const dataMap = lastMapa > 1 ? shMapa.getRange(2, 1, lastMapa - 1, shMapa.getLastColumn()).getValues() : [];
+      const headersMap = shMapa.getRange(1, 1, 1, shMapa.getLastColumn()).getValues()[0].map(h => String(h || '').trim());
+
+      const colMapPin = headersMap.indexOf('ID_LOJA_MAPA');
+      const colMapEsp = headersMap.indexOf('ID_ESPACO');
+      const colMapPapel = headersMap.indexOf('PAPEL_REPRESENTACAO');
+
+      const setEspacos = new Set(dataEsp.map(r => String(r[0] || '').trim()));
+      const setIdent = new Set(dataIdent.map(r => String(r[1] || '').trim()));
+      const setLedger = new Set(dataLed.map(r => String(r[4] || '').trim()));
+
+      const mapPinToEsp = new Map();
+      let totalPinosComEspaco = 0;
+      for (let r = 0; r < dataMap.length; r++) {
+        const pin = String(dataMap[r][colMapPin] || '').trim();
+        const esp = String(dataMap[r][colMapEsp] || '').trim();
+        if (esp) {
+          mapPinToEsp.set(pin, esp);
+          totalPinosComEspaco++;
+        }
+      }
+
+      const colStgStatus = ESPACOS_STAGING_HEADERS.indexOf('STATUS_MIGRACAO');
+      const colStgEsp = ESPACOS_STAGING_HEADERS.indexOf('ID_ESPACO_GERADO');
+      const colStgGrau = ESPACOS_STAGING_HEADERS.indexOf('GRAU_CONFIANCA');
+      let stgPromovidos = 0;
+      let stgPendentes = 0;
+      let stgDet = 0, stgAC = 0, stgRR = 0;
+
+      for (let r = 0; r < dataStg.length; r++) {
+        const s = String(dataStg[r][colStgStatus] || '').trim();
+        const g = String(dataStg[r][colStgGrau] || '').trim();
+        if (s === 'PROMOVIDO') stgPromovidos++;
+        else stgPendentes++;
+        if (g === 'DETERMINISTICO') stgDet++;
+        else if (g === 'ALTA_CONFIANCA') stgAC++;
+        else if (g === 'REQUER_REVISAO') stgRR++;
+      }
+
+      // Amostra factual de espaços solicitados
+      const idsAmostra = payload.idsAmostra || [];
+      const detalhesAmostra = [];
+      if (idsAmostra.length > 0) {
+        const colEspLUC = ESPACOS_HEADERS.indexOf('LUC');
+        const colEspSetor = ESPACOS_HEADERS.indexOf('SETOR');
+        const colEspTipo = ESPACOS_HEADERS.indexOf('TIPO_ESPACO_FISICO');
+        for (let r = 0; r < dataEsp.length; r++) {
+          const id = String(dataEsp[r][0] || '').trim();
+          if (idsAmostra.includes(id)) {
+            detalhesAmostra.push({
+              idEspaco: id,
+              luc: String(dataEsp[r][colEspLUC] || '').trim(),
+              setor: String(dataEsp[r][colEspSetor] || '').trim(),
+              tipo: String(dataEsp[r][colEspTipo] || '').trim()
+            });
+          }
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        sucesso: true,
+        metricas: {
+          totalEspacos: setEspacos.size,
+          totalIdentificadores: setIdent.size,
+          totalLedger: setLedger.size,
+          totalStaging: dataStg.length,
+          stagingPromovidos: stgPromovidos,
+          stagingPendentes: stgPendentes,
+          stagingDeterministico: stgDet,
+          stagingAltaConfianca: stgAC,
+          stagingRequerRevisao: stgRR,
+          totalPinosComEspaco: totalPinosComEspaco,
+          orfaosEspacoSemLedger: Array.from(setEspacos).filter(e => !setLedger.has(e)).length,
+          orfaosEspacoSemIdent: Array.from(setEspacos).filter(e => !setIdent.has(e)).length
+        },
+        amostra: detalhesAmostra
+      }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
     return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Acao desconhecida: ' + action }, null, 2)).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);

@@ -157,6 +157,17 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ sucesso: true, promovidos: resultados }, null, 2)).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (action === 'diagnostico_m2c1_demo') {
+      const res = analisarM2C1Demo();
+      return ContentService.createTextOutput(JSON.stringify({ sucesso: true, resultado: res }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'promover_m2c1_demo') {
+      const user = payload.usuario || 'SISTEMA_M2C1';
+      const res = promoverM2C1Demo(user);
+      return ContentService.createTextOutput(JSON.stringify({ sucesso: true, resultado: res }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (action === 'auditoria_6way') {
       const shEsp = obterAbaEspacos_();
       const shIdent = obterAbaEspacoIdentificadores_();

@@ -43,6 +43,46 @@ function doGet(e) {
       return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
     }
   }
+  if (e && e.parameter && e.parameter.admin === 'm2b_backup_pre') {
+    try {
+      const matrizId = ESPACOS_CONFIG.SPREADSHEET_ID_CANONICO_ESPACOS;
+      const arqMatriz = DriveApp.getFileById(matrizId);
+      const agora = new Date();
+      const stamp = Utilities.formatDate(agora, ESPACOS_CONFIG.TIMEZONE, 'yyyyMMdd-HHmmss');
+      const nomeBackup = 'BACKUP_PRE_M2B_CEOP_2026-09-24_' + stamp;
+      let pastaDestino = null;
+      const pais = arqMatriz.getParents();
+      if (pais.hasNext()) pastaDestino = pais.next();
+      const copia = pastaDestino ? arqMatriz.makeCopy(nomeBackup, pastaDestino) : arqMatriz.makeCopy(nomeBackup);
+      const res = {
+        sucesso: true,
+        fileIdCopia: copia.getId(),
+        nome: copia.getName(),
+        url: copia.getUrl(),
+        spreadsheetOriginalId: matrizId,
+        timestamp: agora.toISOString()
+      };
+      return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  if (e && e.parameter && e.parameter.admin === 'm2b_setup') {
+    try {
+      const res = setupEspacosM2A();
+      return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  if (e && e.parameter && e.parameter.admin === 'm2b_diagnostico') {
+    try {
+      const res = diagnosticoEspacosM2A();
+      return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
   if (e && e.parameter && e.parameter.debug === 'raw') {
     const raw = HtmlService.createTemplateFromFile('index').evaluate().getContent();
     return ContentService.createTextOutput(raw).setMimeType(ContentService.MimeType.TEXT);
@@ -62,6 +102,98 @@ function doGet(e) {
   return HtmlService.createTemplateFromFile('index').evaluate()
     .setTitle(APP.NOME)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1');
+}
+
+/**
+ * Endpoint de administracao e execucao em lote do M2B via POST.
+ */
+function doPost(e) {
+  try {
+    const raw = e && e.postData && e.postData.contents ? e.postData.contents : '{}';
+    const payload = JSON.parse(raw);
+    const action = payload.action;
+
+    if (action === 'backup_pre') {
+      const matrizId = ESPACOS_CONFIG.SPREADSHEET_ID_CANONICO_ESPACOS;
+      const arqMatriz = DriveApp.getFileById(matrizId);
+      const agora = new Date();
+      const stamp = Utilities.formatDate(agora, ESPACOS_CONFIG.TIMEZONE, 'yyyyMMdd-HHmmss');
+      const nomeBackup = 'BACKUP_PRE_M2B_CEOP_2026-09-24_' + stamp;
+      let pastaDestino = null;
+      const pais = arqMatriz.getParents();
+      if (pais.hasNext()) pastaDestino = pais.next();
+      const copia = pastaDestino ? arqMatriz.makeCopy(nomeBackup, pastaDestino) : arqMatriz.makeCopy(nomeBackup);
+      return ContentService.createTextOutput(JSON.stringify({
+        sucesso: true,
+        fileIdCopia: copia.getId(),
+        nome: copia.getName(),
+        url: copia.getUrl(),
+        spreadsheetOriginalId: matrizId,
+        timestamp: agora.toISOString()
+      }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'setup') {
+      const res = setupEspacosM2A();
+      return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'diagnostico') {
+      const res = diagnosticoEspacosM2A();
+      return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'carga_staging') {
+      const registros = payload.registros || [];
+      const res = inserirOuAtualizarStaging(registros, payload.idSnapshotOrigem, payload.fonteOrigem, payload.versaoMigracao, payload.usuario);
+      return ContentService.createTextOutput(JSON.stringify({ sucesso: true, resultado: res }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'promover_lote') {
+      const ids = payload.ids || [];
+      const user = payload.usuario || 'SISTEMA_M2B';
+      const resultados = [];
+      for (let i = 0; i < ids.length; i++) {
+        const idStg = ids[i];
+        try {
+          const r = promoverRegistroStaging(idStg, user);
+          resultados.push({ idStaging: idStg, idEspaco: r.idEspaco, status: 'OK', jaPromovido: r.jaPromovido });
+        } catch (errProm) {
+          resultados.push({ idStaging: idStg, status: 'ERRO', erro: String(errProm?.message || errProm) });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ sucesso: true, promovidos: resultados }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (action === 'auditoria_6way') {
+      const shEsp = obterAbaEspacos_();
+      const shIdent = obterAbaEspacoIdentificadores_();
+      const shStg = obterAbaEspacosStaging_();
+      const shLedger = obterAbaEspacosLedger_();
+      const shMapa = obterAbaLojasMapa_();
+
+      const lastEsp = shEsp.getLastRow();
+      const lastIdent = shIdent.getLastRow();
+      const lastStg = shStg.getLastRow();
+      const lastLedger = shLedger.getLastRow();
+      const lastMapa = shMapa.getLastRow();
+
+      return ContentService.createTextOutput(JSON.stringify({
+        sucesso: true,
+        contagens: {
+          espacos: Math.max(0, lastEsp - 1),
+          identificadores: Math.max(0, lastIdent - 1),
+          staging: Math.max(0, lastStg - 1),
+          ledger: Math.max(0, lastLedger - 1),
+          lojasMapa: Math.max(0, lastMapa - 1)
+        }
+      }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Acao desconhecida: ' + action }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+  }
 }
 function include(nome) { return HtmlService.createHtmlOutputFromFile(nome).getContent(); }
 

@@ -11,14 +11,14 @@
  * @returns {Object}
  */
 function setupEspacosM2A() {
-  const ss = SpreadsheetApp.getActive();
+  const ssEspacos = obterPlanilhaEspacosCanonico_();
   const resultados = [];
 
   // Helper para provisionar ou atualizar colunas
   const provisionarAba = function (nomeAba, headersEsperados) {
-    let sh = ss.getSheetByName(nomeAba);
+    let sh = ssEspacos.getSheetByName(nomeAba);
     if (!sh) {
-      sh = ss.insertSheet(nomeAba);
+      sh = ssEspacos.insertSheet(nomeAba);
       sh.getRange(1, 1, 1, headersEsperados.length).setValues([headersEsperados]);
       sh.setFrozenRows(1);
       resultados.push({ entidade: nomeAba, acao: 'CRIADA', colunas: headersEsperados.length });
@@ -35,25 +35,25 @@ function setupEspacosM2A() {
     }
   };
 
-  // 1. Aba ESPACOS
+  // 1. Aba ESPACOS (Canônica)
   provisionarAba(ESPACOS_CONFIG.SHEET_ESPACOS, ESPACOS_HEADERS);
 
-  // 2. Aba ESPACO_IDENTIFICADORES
+  // 2. Aba ESPACO_IDENTIFICADORES (Canônica)
   provisionarAba(ESPACOS_CONFIG.SHEET_IDENTIFICADORES, ESPACO_IDENTIFICADORES_HEADERS);
 
-  // 3. Aba ESPACO_INFRAESTRUTURA
+  // 3. Aba ESPACO_INFRAESTRUTURA (Canônica)
   provisionarAba(ESPACOS_CONFIG.SHEET_INFRAESTRUTURA, ESPACO_INFRAESTRUTURA_HEADERS);
 
-  // 4. Aba BLOQUEIOS_ESPACO
+  // 4. Aba BLOQUEIOS_ESPACO (Canônica)
   provisionarAba(ESPACOS_CONFIG.SHEET_BLOQUEIOS, BLOQUEIOS_ESPACO_HEADERS);
 
-  // 5. Aba ESPACOS_MIGRACAO_STAGING
+  // 5. Aba ESPACOS_MIGRACAO_STAGING (Canônica)
   provisionarAba(ESPACOS_CONFIG.SHEET_STAGING, ESPACOS_STAGING_HEADERS);
 
-  // 6. Aba ESPACOS_MIGRACAO_LEDGER (M2B Requisito 6)
+  // 6. Aba ESPACOS_MIGRACAO_LEDGER (Canônica)
   provisionarAba(ESPACOS_CONFIG.SHEET_LEDGER, ESPACOS_LEDGER_HEADERS);
 
-  // 7. Integração com LOJAS_MAPA
+  // 7. Integração com LOJAS_MAPA (Canônica Cartografia)
   const resMapa = garantirColunasIntegracaoLojasMapa_();
   resultados.push({
     entidade: ESPACOS_CONFIG.SHEET_LOJAS_MAPA,
@@ -64,6 +64,7 @@ function setupEspacosM2A() {
     sucesso: true,
     fase: 'M2B-0',
     timestamp: new Date().toISOString(),
+    spreadsheetEspacosId: ssEspacos.getId(),
     resultados: resultados
   };
 }
@@ -73,27 +74,41 @@ function setupEspacosM2A() {
  * @returns {Object}
  */
 function diagnosticoEspacosM2A() {
-  const ss = SpreadsheetApp.getActive();
+  const ssEspacos = obterPlanilhaEspacosCanonico_();
+  const ssMapa = obterPlanilhaCartografiaCanonico_();
   const checks = [];
   const add = function (nome, ok, detalhe) { checks.push({ nome: nome, ok: !!ok, detalhe: detalhe }); };
 
-  // 1. Verificação de abas
+  // 1. Verificação de abas no domínio de espaços
   const abasEsperadas = [
     ESPACOS_CONFIG.SHEET_ESPACOS,
     ESPACOS_CONFIG.SHEET_IDENTIFICADORES,
     ESPACOS_CONFIG.SHEET_INFRAESTRUTURA,
     ESPACOS_CONFIG.SHEET_BLOQUEIOS,
     ESPACOS_CONFIG.SHEET_STAGING,
-    ESPACOS_CONFIG.SHEET_LOJAS_MAPA
+    ESPACOS_CONFIG.SHEET_LEDGER
   ];
 
   abasEsperadas.forEach(nome => {
-    const sh = ss.getSheetByName(nome);
-    add('ABA_' + nome, !!sh, sh ? 'Presente com ' + sh.getLastRow() + ' linhas' : 'Ausente');
+    const sh = ssEspacos.getSheetByName(nome);
+    add('ABA_' + nome, !!sh, sh ? 'Presente com ' + sh.getLastRow() + ' linhas em ' + ssEspacos.getId() : 'Ausente em ' + ssEspacos.getId());
   });
 
+  // Verificação de LOJAS_MAPA na cartografia
+  const shMapa = ssMapa.getSheetByName(ESPACOS_CONFIG.SHEET_LOJAS_MAPA);
+  add('ABA_' + ESPACOS_CONFIG.SHEET_LOJAS_MAPA, !!shMapa, shMapa ? 'Presente com ' + shMapa.getLastRow() + ' linhas em ' + ssMapa.getId() : 'Ausente');
+
+  // Isolamento topológico: assegura que abas de espaços não vazaram para a planilha Permissionário se diferente
+  try {
+    const ssAtiva = SpreadsheetApp.getActive();
+    if (ssAtiva && ssAtiva.getId() !== ssEspacos.getId()) {
+      const duplicadas = abasEsperadas.filter(nome => !!ssAtiva.getSheetByName(nome));
+      add('ISOLAMENTO_TOPOLOGICO_PERMISSIONARIO', duplicadas.length === 0, duplicadas.length === 0 ? 'Conforme: nenhuma aba duplicada em ' + ssAtiva.getId() : 'FALHA: Abas criadas na planilha errada: ' + duplicadas.join(', '));
+    }
+  } catch (_) {}
+
   // 2. Validação de Headers em ESPACOS
-  const shEsp = ss.getSheetByName(ESPACOS_CONFIG.SHEET_ESPACOS);
+  const shEsp = ssEspacos.getSheetByName(ESPACOS_CONFIG.SHEET_ESPACOS);
   if (shEsp) {
     const h = shEsp.getRange(1, 1, 1, Math.max(1, shEsp.getLastColumn())).getValues()[0];
     const todosHeaders = ESPACOS_HEADERS.every(c => h.includes(c));
@@ -110,7 +125,7 @@ function diagnosticoEspacosM2A() {
   }
 
   // 3. Validação de Headers em ESPACO_IDENTIFICADORES
-  const shIdent = ss.getSheetByName(ESPACOS_CONFIG.SHEET_IDENTIFICADORES);
+  const shIdent = ssEspacos.getSheetByName(ESPACOS_CONFIG.SHEET_IDENTIFICADORES);
   if (shIdent) {
     const h = shIdent.getRange(1, 1, 1, Math.max(1, shIdent.getLastColumn())).getValues()[0];
     const todos = ESPACO_IDENTIFICADORES_HEADERS.every(c => h.includes(c));
@@ -121,7 +136,7 @@ function diagnosticoEspacosM2A() {
   }
 
   // 4. Validação de Headers em ESPACOS_MIGRACAO_STAGING
-  const shStg = ss.getSheetByName(ESPACOS_CONFIG.SHEET_STAGING);
+  const shStg = ssEspacos.getSheetByName(ESPACOS_CONFIG.SHEET_STAGING);
   if (shStg) {
     const h = shStg.getRange(1, 1, 1, Math.max(1, shStg.getLastColumn())).getValues()[0];
     const temSnapshot = h.includes('ID_SNAPSHOT_ORIGEM') && h.includes('ID_REGISTRO_ORIGEM') && h.includes('CHAVE_MIGRACAO_ORIGEM');
@@ -129,7 +144,7 @@ function diagnosticoEspacosM2A() {
   }
 
   // 5. Validação de Headers em ESPACOS_MIGRACAO_LEDGER
-  const shLedger = ss.getSheetByName(ESPACOS_CONFIG.SHEET_LEDGER);
+  const shLedger = ssEspacos.getSheetByName(ESPACOS_CONFIG.SHEET_LEDGER);
   if (shLedger) {
     const h = shLedger.getRange(1, 1, 1, Math.max(1, shLedger.getLastColumn())).getValues()[0];
     const todosLedger = ESPACOS_LEDGER_HEADERS.every(c => h.includes(c));
@@ -487,7 +502,7 @@ function testesUnitariosEspacosM2A() {
  * @private
  */
 function limparDadosTesteM2A_(idEspaco, idBloqueio, idStaging) {
-  const ss = SpreadsheetApp.getActive();
+  const ss = obterPlanilhaEspacosCanonico_();
 
   const validarNamespaceTeste = function (id, prefixosValidos) {
     if (!id) return false;
@@ -567,7 +582,7 @@ function limparDadosTesteM2A_(idEspaco, idBloqueio, idStaging) {
  * @returns {Object}
  */
 function rollbackEspacosM2A() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = obterPlanilhaEspacosCanonico_();
   const relatorio = [];
 
   const abasNovas = [

@@ -13,7 +13,7 @@
  * @private
  */
 function obterAbaEspacosStaging_() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = obterPlanilhaEspacosCanonico_();
   let sh = ss.getSheetByName(ESPACOS_CONFIG.SHEET_STAGING);
   if (!sh) {
     sh = ss.insertSheet(ESPACOS_CONFIG.SHEET_STAGING);

@@ -14,7 +14,7 @@
  * @private
  */
 function obterAbaEspacos_() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = obterPlanilhaEspacosCanonico_();
   let sh = ss.getSheetByName(ESPACOS_CONFIG.SHEET_ESPACOS);
   if (!sh) {
     sh = ss.insertSheet(ESPACOS_CONFIG.SHEET_ESPACOS);
@@ -36,7 +36,7 @@ function obterAbaEspacos_() {
  * @private
  */
 function obterAbaEspacoIdentificadores_() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = obterPlanilhaEspacosCanonico_();
   let sh = ss.getSheetByName(ESPACOS_CONFIG.SHEET_IDENTIFICADORES);
   if (!sh) {
     sh = ss.insertSheet(ESPACOS_CONFIG.SHEET_IDENTIFICADORES);
@@ -57,7 +57,7 @@ function obterAbaEspacoIdentificadores_() {
  * @private
  */
 function obterAbaEspacosLedger_() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = obterPlanilhaEspacosCanonico_();
   let sh = ss.getSheetByName(ESPACOS_CONFIG.SHEET_LEDGER);
   if (!sh) {
     sh = ss.insertSheet(ESPACOS_CONFIG.SHEET_LEDGER);

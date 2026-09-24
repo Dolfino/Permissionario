@@ -1,5 +1,5 @@
 /**
- * SINALIZAÇÃO DO MALL — GESTÃO DE ESPAÇOS FÍSICOS (M2A)
+ * SINALIZAÇÃO DO MALL — GESTÃO DE ESPAÇOS FÍSICOS (M2A / M2B)
  * Módulo: EspacosIntegracaoMapa.gs
  * Objetivo: Integração relacional entre ESPACOS (Ativo Físico) e LOJAS_MAPA (Representação Cartográfica).
  * Cardinalidade: ESPACO (1) -> (0..N) REPRESENTACOES_CARTOGRAFICAS
@@ -7,14 +7,22 @@
  */
 
 /**
+ * Retorna a aba LOJAS_MAPA na Planilha Canônica de Cartografia.
+ * @private
+ */
+function obterAbaLojasMapa_() {
+  const ss = obterPlanilhaCartografiaCanonico_();
+  const sh = ss.getSheetByName(ESPACOS_CONFIG.SHEET_LOJAS_MAPA);
+  if (!sh) throw new Error('LOJAS_MAPA_AUSENTE: Aba LOJAS_MAPA não localizada na planilha canônica de cartografia.');
+  return sh;
+}
+
+/**
  * Garante que a aba LOJAS_MAPA possua as colunas ID_ESPACO e PAPEL_REPRESENTACAO de forma idempotente.
  * @returns {Object} { alterado: boolean, headers: Array<string> }
  */
 function garantirColunasIntegracaoLojasMapa_() {
-  const ss = SpreadsheetApp.getActive();
-  const sh = ss.getSheetByName(ESPACOS_CONFIG.SHEET_LOJAS_MAPA);
-  if (!sh) throw new Error('LOJAS_MAPA_AUSENTE: Aba LOJAS_MAPA não localizada na planilha ativa.');
-
+  const sh = obterAbaLojasMapa_();
   const lastCol = Math.max(1, sh.getLastColumn());
   const headers = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
   let alterado = false;
@@ -64,8 +72,7 @@ function vincularEspacoAPinoMapa(idLojaMapa, idEspaco, papelRepresentacao, usuar
     throw new Error('INTEGRIDADE_REFERENCIAL: Não existe espaço físico com ID_ESPACO: ' + idEsp);
   }
 
-  const ss = SpreadsheetApp.getActive();
-  const sh = ss.getSheetByName(ESPACOS_CONFIG.SHEET_LOJAS_MAPA);
+  const sh = obterAbaLojasMapa_();
   const lastRow = sh.getLastRow();
   const lastCol = sh.getLastColumn();
   const headers = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
@@ -119,8 +126,7 @@ function vincularEspacoAPinoMapa(idLojaMapa, idEspaco, papelRepresentacao, usuar
 function desvincularPinoMapa(idLojaMapa) {
   garantirColunasIntegracaoLojasMapa_();
   const idPin = String(idLojaMapa || '').trim();
-  const ss = SpreadsheetApp.getActive();
-  const sh = ss.getSheetByName(ESPACOS_CONFIG.SHEET_LOJAS_MAPA);
+  const sh = obterAbaLojasMapa_();
   const lastRow = sh.getLastRow();
   const lastCol = sh.getLastColumn();
   const headers = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
@@ -147,8 +153,7 @@ function desvincularPinoMapa(idLojaMapa) {
 function listarPinosDoEspaco(idEspaco) {
   garantirColunasIntegracaoLojasMapa_();
   const idEsp = String(idEspaco || '').trim();
-  const ss = SpreadsheetApp.getActive();
-  const sh = ss.getSheetByName(ESPACOS_CONFIG.SHEET_LOJAS_MAPA);
+  const sh = obterAbaLojasMapa_();
   const lastRow = sh.getLastRow();
   if (lastRow <= 1) return [];
 

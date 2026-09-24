@@ -33,6 +33,12 @@ const ESPACOS_CONFIG = Object.freeze({
   CHAVE_PROP_SEQUENCIAL_STAGING: 'M2_SEQUENCIAL_STAGING',
   CHAVE_PROP_CHECKPOINT_MIGRACAO: 'M2_CHECKPOINT_MIGRACAO',
 
+  // Configuração Soberana de Topologia Canônica
+  SPREADSHEET_ID_CANONICO_ESPACOS: '1j5bYY-0JpbLd95FyV19lyRPSG6j9kpoM8UCCWZjKchs',
+  SPREADSHEET_ID_CANONICO_CARTOGRAFIA: '1j5bYY-0JpbLd95FyV19lyRPSG6j9kpoM8UCCWZjKchs',
+  CHAVE_PROP_SPREADSHEET_ID_ESPACOS: 'M2_SPREADSHEET_ID_ESPACOS',
+  CHAVE_PROP_SPREADSHEET_ID_CARTOGRAFIA: 'M2_SPREADSHEET_ID_CARTOGRAFIA',
+
   LOCK_TIMEOUT_MS: 30000,
   VERSAO_MIGRACAO: 'M2B-2026-09-24',
   VERSAO_RECONCILIADOR: 'REC-2026-09-24-V1',
@@ -41,6 +47,42 @@ const ESPACOS_CONFIG = Object.freeze({
   TAMANHO_LOTE_PADRAO: 200,
   MAX_TEMPO_EXECUCAO_MS: 240000 // 4 minutos de teto para respeitar limite de 6 min do Apps Script
 });
+
+/**
+ * Resolver explícito da Planilha Canônica de Espaços (Domínio Físico / CEOP).
+ * NUNCA utiliza SpreadsheetApp.getActive() como decisão cega de destino.
+ * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet}
+ */
+function obterPlanilhaEspacosCanonico_() {
+  const props = PropertiesService.getScriptProperties();
+  const idConfigurado = props.getProperty(ESPACOS_CONFIG.CHAVE_PROP_SPREADSHEET_ID_ESPACOS) || ESPACOS_CONFIG.SPREADSHEET_ID_CANONICO_ESPACOS;
+  if (!idConfigurado) throw new Error('SPREADSHEET_ID_ESPACOS_NAO_CONFIGURADO: ID da planilha canônica de espaços não definido.');
+
+  try {
+    const ativa = SpreadsheetApp.getActive();
+    if (ativa && ativa.getId() === idConfigurado) return ativa;
+  } catch (_) {}
+
+  return SpreadsheetApp.openById(idConfigurado);
+}
+
+/**
+ * Resolver explícito da Planilha Canônica de Cartografia (LOJAS_MAPA / CEOP).
+ * NUNCA utiliza SpreadsheetApp.getActive() como decisão cega de destino.
+ * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet}
+ */
+function obterPlanilhaCartografiaCanonico_() {
+  const props = PropertiesService.getScriptProperties();
+  const idConfigurado = props.getProperty(ESPACOS_CONFIG.CHAVE_PROP_SPREADSHEET_ID_CARTOGRAFIA) || ESPACOS_CONFIG.SPREADSHEET_ID_CANONICO_CARTOGRAFIA;
+  if (!idConfigurado) throw new Error('SPREADSHEET_ID_CARTOGRAFIA_NAO_CONFIGURADO: ID da planilha de cartografia não definido.');
+
+  try {
+    const ativa = SpreadsheetApp.getActive();
+    if (ativa && ativa.getId() === idConfigurado) return ativa;
+  } catch (_) {}
+
+  return SpreadsheetApp.openById(idConfigurado);
+}
 
 /**
  * Schemas Canônicos das Abas

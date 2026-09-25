@@ -220,8 +220,8 @@ function obterUsuarioAutenticadoServerSide_(payload, ss) {
     };
   }
 
-  // Se for teste automatizado explícito no ambiente de teste com mock isolado:
-  if (payload && (payload.ambiente === 'TESTE' || String(payload.idStaging || '').startsWith('TEST-'))) {
+  // Se for teste automatizado explícito com token de sistema no ambiente de teste com mock isolado:
+  if (payload && payload._sistemaToken === 'SISTEMA_M2C_TESTE' && (payload.ambiente === 'TESTE' || String(payload.idStaging || '').startsWith('TEST-'))) {
     const roleSimulado = String(payload.role || 'TECNICO').toUpperCase();
     const emailMock = email || (roleSimulado === 'SUPERVISOR' ? 'supervisor.teste@mall.local' : 'tecnico.teste@mall.local');
     return {

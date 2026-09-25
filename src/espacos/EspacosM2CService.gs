@@ -1032,6 +1032,123 @@ function persistirDiagnostico4EixosM2C_(registros, versaoRegra, idExecucao, hash
 }
 
 
+/**
+ * Corrige os ID_STAGING no diagnóstico M2C quando houver divergência de lineage.
+ * Registra cada correção como evento append-only em ESPACOS_M2C_DIAGNOSTICO_HISTORICO.
+ * 
+ * NÃO altera ESPACOS, LEDGER, STAGING nem qualquer ID_ESPACO.
+ * 
+ * @param {Array<Object>} correcoes Lista de { idStagingAnterior, idStagingCorreto, luc }
+ * @param {string} [versaoRegra='M2C-2B-3']
+ * @param {string} [motivo='CORRECAO_LINEAGE_ID_STAGING']
+ * @param {string} [usuario='SISTEMA_M2C2B3']
+ * @returns {Object}
+ */
+function corrigirLineageDiagnosticoM2C_(correcoes, versaoRegra, motivo, usuario) {
+  const user = usuario || 'SISTEMA_M2C2B3';
+  const regra = versaoRegra || 'M2C-2B-3';
+  const motivoEvento = motivo || 'CORRECAO_LINEAGE_ID_STAGING';
+  const agora = Utilities.formatDate(new Date(), ESPACOS_CONFIG.TIMEZONE, 'yyyy-MM-dd HH:mm:ss');
+  const execId = 'EXEC-LINEAGE-' + Utilities.formatDate(new Date(), ESPACOS_CONFIG.TIMEZONE, 'yyyyMMdd-HHmmss') + '-' + Utilities.getUuid().slice(0, 6).toUpperCase();
+
+  const ss = obterPlanilhaEspacosCanonico_();
+  const shDiag = ss.getSheetByName('ESPACOS_M2C_DIAGNOSTICO');
+  if (!shDiag || shDiag.getLastRow() < 2) {
+    throw new Error('ESPACOS_M2C_DIAGNOSTICO ausente ou vazia.');
+  }
+
+  const hDiag = shDiag.getRange(1, 1, 1, shDiag.getLastColumn()).getValues()[0].map(function(c) { return String(c || '').trim(); });
+  const dadosDiag = shDiag.getRange(2, 1, shDiag.getLastRow() - 1, hDiag.length).getValues();
+  const colIdStg = hDiag.indexOf('ID_STAGING');
+  const colLuc = hDiag.indexOf('LUC_LEGADO');
+  const colAtualizado = hDiag.indexOf('ATUALIZADO_EM');
+
+  // Monta mapa de correção: idAnterior -> idCorreto
+  var mapaCorrecao = {};
+  for (var c = 0; c < correcoes.length; c++) {
+    mapaCorrecao[correcoes[c].idStagingAnterior] = correcoes[c].idStagingCorreto;
+  }
+
+  // Aplica correções em ESPACOS_M2C_DIAGNOSTICO
+  var corrigidos = 0;
+  var eventosHistorico = [];
+  for (var r = 0; r < dadosDiag.length; r++) {
+    var idAtual = String(dadosDiag[r][colIdStg] || '').trim();
+    if (mapaCorrecao[idAtual]) {
+      var idCorreto = mapaCorrecao[idAtual];
+      dadosDiag[r][colIdStg] = idCorreto;
+      if (colAtualizado >= 0) dadosDiag[r][colAtualizado] = agora;
+      corrigidos++;
+
+      eventosHistorico.push({
+        idStagingAnterior: idAtual,
+        idStagingCorreto: idCorreto,
+        luc: String(dadosDiag[r][colLuc] || '').trim()
+      });
+    }
+  }
+
+  if (corrigidos > 0) {
+    shDiag.getRange(2, 1, dadosDiag.length, hDiag.length).setValues(dadosDiag);
+  }
+
+  // Registra eventos de correção em ESPACOS_M2C_DIAGNOSTICO_HISTORICO
+  var shHist = ss.getSheetByName('ESPACOS_M2C_DIAGNOSTICO_HISTORICO');
+  if (shHist) {
+    var lastRowHist = shHist.getLastRow();
+    var maxHistId = 0;
+    if (lastRowHist > 1) {
+      var idsExistentes = shHist.getRange(2, 1, lastRowHist - 1, 1).getValues();
+      for (var i = 0; i < idsExistentes.length; i++) {
+        var mId = String(idsExistentes[i][0] || '').match(/^DGH-(\d+)$/);
+        if (mId) {
+          var n = parseInt(mId[1], 10);
+          if (n > maxHistId) maxHistId = n;
+        }
+      }
+    }
+
+    var linhasHist = [];
+    for (var e = 0; e < eventosHistorico.length; e++) {
+      maxHistId++;
+      var ev = eventosHistorico[e];
+      linhasHist.push([
+        'DGH-' + String(maxHistId).padStart(6, '0'),
+        execId,
+        ev.idStagingCorreto,          // ID_STAGING (corrigido)
+        ev.luc,                        // LUC_LEGADO
+        'CORRECAO_LINEAGE',            // STATUS_IDENTIDADE_FISICA (usado como tipo de evento)
+        motivoEvento,                  // STATUS_IDENTIFICADOR (usado para motivo)
+        '',                            // CLASSE_ATIVO_FISICO
+        '',                            // STATUS_CARTOGRAFICO
+        '',                            // CORREDOR_OFICIAL
+        'ID_STAGING_ANTERIOR=' + ev.idStagingAnterior + '; ID_STAGING_CORRETO=' + ev.idStagingCorreto, // FONTES_EVIDENCIA
+        '',                            // CONTRADICOES
+        motivoEvento + ': ID_STAGING derivado de LINHA_ORIGEM no script de dry-run em vez da PK persistida real.', // JUSTIFICATIVA
+        '',                            // ELEGIVEL_VISTORIA
+        regra,                         // VERSAO_REGRA
+        '',                            // HASH_FONTE
+        agora,                         // REGISTRADO_EM
+        user                           // REGISTRADO_POR
+      ]);
+    }
+
+    if (linhasHist.length > 0) {
+      shHist.getRange(lastRowHist + 1, 1, linhasHist.length, M2C_DIAGNOSTICO_HISTORICO_HEADERS.length).setValues(linhasHist);
+    }
+  }
+
+  return {
+    sucesso: true,
+    corrigidos: corrigidos,
+    totalEventosHistorico: eventosHistorico.length,
+    idExecucao: execId,
+    versaoRegra: regra,
+    motivo: motivoEvento,
+    corrigidoEm: agora,
+    corrigidoPor: user
+  };
+}
 
 
 

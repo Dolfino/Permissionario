@@ -312,6 +312,19 @@ function doPost(e) {
       }
     }
 
+    if (action === 'corrigir_lineage_diagnostico_m2c') {
+      try {
+        const correcoes = payload.correcoes || [];
+        const versaoRegra = payload.versaoRegra || 'M2C-2B-3';
+        const motivo = payload.motivo || 'CORRECAO_LINEAGE_ID_STAGING';
+        const usuario = payload.usuario || 'SISTEMA_M2C2B3';
+        const res = corrigirLineageDiagnosticoM2C_(correcoes, versaoRegra, motivo, usuario);
+        return ContentService.createTextOutput(JSON.stringify(res, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ sucesso: false, erro: String(err?.message || err) }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
 
 
     if (action === 'auditoria_6way') {
